@@ -1,4 +1,7 @@
 // backend/index.js
+require('dotenv').config(); 
+
+
 const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
@@ -6,6 +9,12 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
 console.log("🔥🔥🔥 Backend restarted and running latest code");
+
+console.log('📦 PREDICTION_KEY:', process.env.PREDICTION_KEY);
+console.log('🌍 ENDPOINT:', process.env.ENDPOINT);
+console.log('🆔 PROJECT_ID:', process.env.PROJECT_ID);
+console.log('📸 ITERATION_NAME:', process.env.ITERATION_NAME);
+
 
 const axios = require('axios');
 
@@ -37,18 +46,29 @@ app.post('/analyze', upload.single('image'), async (req, res) => {
     const lat = parseFloat(req.body.lat);
     const lng = parseFloat(req.body.lng);
 
-   if (!imageFile || isNaN(lat) || isNaN(lng)) {
-  return res.status(400).json({ error: 'Missing image or location data' });
-}
-
+    if (!imageFile || isNaN(lat) || isNaN(lng)) {
+      return res.status(400).json({ error: 'Missing image or location data' });
+    }
 
     console.log('✅ Received image:', imageFile.path);
     console.log('📍 Location:', lat, lng);
 
     const imageBuffer = fs.readFileSync(imageFile.path);
 
+    // Remove trailing slash from endpoint if any
+    const endpoint = process.env.ENDPOINT.replace(/\/$/, '');
+    const url = `${endpoint}/customvision/v3.0/Prediction/${process.env.PROJECT_ID}/classify/iterations/${process.env.ITERATION_NAME}/image`;
+
+    // Debug logs
+    console.log('➡️ Sending to Azure:', url);
+    console.log('➡️ Headers:', {
+      'Content-Type': 'application/octet-stream',
+      'Prediction-Key': process.env.PREDICTION_KEY,
+    });
+    console.log('➡️ Image Buffer length:', imageBuffer.length);
+
     const response = await axios.post(
-      `${process.env.ENDPOINT}/customvision/v3.0/Prediction/${process.env.PROJECT_ID}/classify/iterations/${process.env.ITERATION_NAME}/image`,
+      url,
       imageBuffer,
       {
         headers: {
@@ -57,6 +77,9 @@ app.post('/analyze', upload.single('image'), async (req, res) => {
         },
       }
     );
+
+    // Clean up uploaded file
+    fs.unlinkSync(imageFile.path);
 
     const topPrediction = response.data.predictions[0];
 
@@ -71,13 +94,10 @@ app.post('/analyze', upload.single('image'), async (req, res) => {
     console.error('🔥 Error during analysis:', err.message);
 
     if (err.response) {
-      // This is the key — log the whole Azure API error response data
       console.error('Azure API response error:', err.response.data);
     } else if (err.request) {
-      // Request was made but no response received
       console.error('No response received:', err.request);
     } else {
-      // Other errors (setup, coding, etc)
       console.error('Other error:', err);
     }
 
