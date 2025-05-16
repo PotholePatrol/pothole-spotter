@@ -1,11 +1,13 @@
-// src/App.js
 import React, { useState } from 'react';
 import ImageUpload from './components/ImageUpload';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import AnalysisSummary from './components/AnalysisSummary';
+import './App.css'; // ⬅️ make sure this is imported
 
-// Fix Leaflet icons in React
+
+
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
@@ -13,7 +15,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
 });
 
-// Component to handle map clicks
 function LocationSelector({ onSelect }) {
   useMapEvents({
     click(e) {
@@ -24,107 +25,158 @@ function LocationSelector({ onSelect }) {
   return null;
 }
 
+function RoadStretchSelector({ start, end, setStart, setEnd }) {
+  useMapEvents({
+    click(e) {
+      const { lat, lng } = e.latlng;
+      if (!start) setStart({ lat, lng });
+      else if (!end) setEnd({ lat, lng });
+      else {
+        setStart({ lat, lng });
+        setEnd(null);
+      }
+    },
+  });
+  return null;
+}
+
 function App() {
-  const [imageFile, setImageFile] = useState(null);
+  const [imageFiles, setImageFiles] = useState([]);
   const [location, setLocation] = useState(null);
   const [result, setResult] = useState(null);
   const [allData, setAllData] = useState([]);
+  const [predictions, setPredictions] = useState([]);
+  const [startPoint, setStartPoint] = useState(null);
+  const [endPoint, setEndPoint] = useState(null);
 
   const handleUpload = async () => {
-  if (!imageFile || !location) {
-    alert('Please upload an image and click on the map to select location');
-    return;
-  }
-
-  const formData = new FormData();
-  formData.append('image', imageFile);
-  formData.append('lat', location.lat);
-  formData.append('lng', location.lng);
-
-  try {
-    const res = await fetch('http://localhost:5000/analyze', {
-      method: 'POST',
-      body: formData,
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      console.error('❌ Backend error:', data.error);
-      alert(`Analysis failed: ${data.error}`);
+    if (!imageFiles.length || !location) {
+      alert('Please upload images and select location');
       return;
     }
 
-    setResult(data);
-    setAllData(prev => [...prev, data]);
-  } catch (err) {
-    console.error('❌ Upload failed:', err);
-    alert('Upload failed. Check your server or internet.');
-  }
+    const results = [];
+
+    for (let file of imageFiles) {
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('lat', location.lat);
+      formData.append('lng', location.lng);
+
+      try {
+        const res = await fetch('http://localhost:5000/analyze', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          console.error('❌ Backend error:', data.error);
+          alert(`Analysis failed: ${data.error}`);
+          continue;
+        }
+
+        results.push(data);
+      } catch (err) {
+        console.error('❌ Upload failed:', err);
+        alert('Upload failed. Check your server or internet.');
+      }
+    }
+
+    if (results.length > 0) {
+      setResult(results[0]);
+      setAllData(prev => [...prev, ...results]);
+      setPredictions(prev => [...prev, ...results.map(r => r.label)]);
+    }
   };
-
-
-  
 
   const getColor = (label) => {
-    if (label === 'major') return 'red';
-    if (label === 'minor') return 'orange';
-    return 'green';
-  };
+     const normalized = label.toLowerCase();
+        if (normalized.includes('major')) return 'red';
+        if (normalized.includes('minor')) return 'orange';
+        return 'green';
+      };
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <h1>Pothole Detection System 🚧</h1>
+    <div className="app-container">
+      <h1 className="app-title">🛠️ Pothole Detection System</h1>
 
-      <ImageUpload onImageSelect={setImageFile} />
+      <ImageUpload onImagesSelect={setImageFiles} />
 
-      <p><strong>Click on the map</strong> to choose location of the pothole 📍</p>
+      <p className="map-instruction">Click on the map to select pothole location 📍</p>
 
-      <button onClick={handleUpload} style={{ marginBottom: '1rem' }}>
-        Analyze Image
+      <button className="upload-btn" onClick={handleUpload}>
+        Analyze Images
       </button>
 
       {result && (
-        <div style={{ marginBottom: '1rem' }}>
-          <h3>Latest Detection:</h3>
-          <p>Label: {result.label}</p>
+        <div className="result-box">
+          <h3>Latest Detection</h3>
+          <p><strong>Label:</strong> {result.label}</p>
           {result.location ? (
-            <p>Location: {result.location.lat}, {result.location.lng}</p>
+            <p><strong>Location:</strong> {result.location.lat}, {result.location.lng}</p>
           ) : (
-            <p style={{ color: 'red' }}>Location data missing</p>
+            <p className="error-text">⚠️ Location data missing</p>
           )}
         </div>
       )}
 
+      <AnalysisSummary predictions={predictions} />
 
-      <MapContainer center={[-1.286389, 36.817223]} zoom={12} style={{ height: '400px', width: '100%' }}>
-        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      <div className="map-wrapper">
+        <MapContainer center={[-1.286389, 36.817223]} zoom={12} style={{ height: '100%', width: '100%' }}>
+          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          <LocationSelector onSelect={setLocation} />
+          <RoadStretchSelector start={startPoint} end={endPoint} setStart={setStartPoint} setEnd={setEndPoint} />
 
-        <LocationSelector onSelect={setLocation} />
+          {location && (
+            <Marker position={[location.lat, location.lng]}>
+              <Popup>Selected Location</Popup>
+            </Marker>
+          )}
 
-        {location && (
-          <Marker position={[location.lat, location.lng]}>
-            <Popup>Selected Location</Popup>
-          </Marker>
-        )}
-
-        {allData.map((entry, i) => (
-          <Marker
-            key={i}
-            position={[entry.location.lat, entry.location.lng]}
-            icon={L.divIcon({
+          {startPoint && (
+            <Marker position={[startPoint.lat, startPoint.lng]} icon={L.divIcon({
               className: 'custom-icon',
-              html: `<div style="background:${getColor(entry.label)};width:20px;height:20px;border-radius:50%"></div>`
-            })}
-          >
-            <Popup>
-              <strong>{entry.label.toUpperCase()}</strong><br />
-              Lat: {entry.location.lat}<br />
-              Lng: {entry.location.lng}
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
+              html: `<div class="start-marker"></div>`
+            })}>
+              <Popup>Start Point</Popup>
+            </Marker>
+          )}
+
+          {endPoint && (
+            <Marker position={[endPoint.lat, endPoint.lng]} icon={L.divIcon({
+              className: 'custom-icon',
+              html: `<div class="end-marker"></div>`
+            })}>
+              <Popup>End Point</Popup>
+            </Marker>
+          )}
+
+          {allData.map((entry, i) => {
+            console.log('🧪 Label:', entry.label); // Add this line for debugging
+
+            return (
+              <Marker
+                key={i}
+                position={[entry.location.lat, entry.location.lng]}
+                icon={L.divIcon({
+                  className: 'custom-icon',
+                  html: `<div style="background:${getColor(entry.label)};width:20px;height:20px;border-radius:50%"></div>`
+                })}
+              >
+                <Popup>
+                  <strong>{entry.label.toUpperCase()}</strong><br />
+                  Lat: {entry.location.lat}<br />
+                  Lng: {entry.location.lng}
+                </Popup>
+              </Marker>
+            );
+          })}
+
+        </MapContainer>
+      </div>
     </div>
   );
 }
