@@ -4,10 +4,9 @@ import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaf
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import AnalysisSummary from './components/AnalysisSummary';
-import './App.css'; // ⬅️ make sure this is imported
+import './App.css';
 
-
-
+// Fix leaflet icon loading for webpack
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
@@ -48,20 +47,39 @@ function App() {
   const [predictions, setPredictions] = useState([]);
   const [startPoint, setStartPoint] = useState(null);
   const [endPoint, setEndPoint] = useState(null);
+  const [selectionMode, setSelectionMode] = useState("points"); // "points" or "roadStretch"
+
+  // Toggle selection mode + clear coords to avoid confusion
+  const toggleSelectionMode = () => {
+    if (selectionMode === "points") {
+      setLocation(null);
+    } else {
+      setStartPoint(null);
+      setEndPoint(null);
+    }
+    setSelectionMode(selectionMode === "points" ? "roadStretch" : "points");
+  };
 
   const handleUpload = async () => {
-    if (!imageFiles.length || !location) {
+    if (selectionMode === "points" && (!imageFiles.length || !location)) {
       alert('Please upload images and select location');
       return;
     }
+    if (selectionMode === "roadStretch" && (!imageFiles.length || !startPoint || !endPoint)) {
+      alert('Please upload images and select start and end points');
+      return;
+    }
+
+    // For now, sending just location or startPoint coords for each image
+    const coords = selectionMode === "points" ? location : startPoint;
 
     const results = [];
 
     for (let file of imageFiles) {
       const formData = new FormData();
       formData.append('image', file);
-      formData.append('lat', location.lat);
-      formData.append('lng', location.lng);
+      formData.append('lat', coords.lat);
+      formData.append('lng', coords.lng);
 
       try {
         const res = await fetch('http://localhost:5000/analyze', {
@@ -91,20 +109,29 @@ function App() {
     }
   };
 
+  // Color code for marker based on label severity
   const getColor = (label) => {
-     const normalized = label.toLowerCase();
-        if (normalized.includes('major')) return 'red';
-        if (normalized.includes('minor')) return 'orange';
-        return 'green';
-      };
+    const normalized = label.toLowerCase();
+    if (normalized.includes('major')) return 'red';
+    if (normalized.includes('minor')) return 'orange';
+    return 'green';
+  };
 
   return (
     <div className="app-container">
-      <h1 className="app-title">🛠️ Pothole Detection System</h1>
+      <h1 className="app-title">🛠️ SmartRoads System</h1>
+
+      <button className="toggle-btn" onClick={toggleSelectionMode}>
+        Switch to {selectionMode === "points" ? "Road Stretch Selection" : "Single Point Selection"}
+      </button>
 
       <ImageUpload onImagesSelect={setImageFiles} />
 
-      <p className="map-instruction">Click on the map to select pothole location 📍</p>
+      <p className="map-instruction">
+        {selectionMode === "points" 
+          ? "Click on the map to select pothole location 📍" 
+          : "Click twice on the map to select Start and End points for road stretch 📍📍"}
+      </p>
 
       <button className="upload-btn" onClick={handleUpload}>
         Analyze Images
@@ -124,57 +151,65 @@ function App() {
 
       <AnalysisSummary predictions={predictions} />
 
-      <div className="map-wrapper">
+      <div className="map-wrapper" style={{ height: '500px', width: '100%' }}>
         <MapContainer center={[-1.286389, 36.817223]} zoom={12} style={{ height: '100%', width: '100%' }}>
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-          <LocationSelector onSelect={setLocation} />
-          <RoadStretchSelector start={startPoint} end={endPoint} setStart={setStartPoint} setEnd={setEndPoint} />
 
-          {location && (
+          {selectionMode === "points" ? (
+            <LocationSelector onSelect={setLocation} />
+          ) : (
+            <RoadStretchSelector start={startPoint} end={endPoint} setStart={setStartPoint} setEnd={setEndPoint} />
+          )}
+
+          {/* Single location marker */}
+          {selectionMode === "points" && location && (
             <Marker position={[location.lat, location.lng]}>
               <Popup>Selected Location</Popup>
             </Marker>
           )}
 
-          {startPoint && (
-            <Marker position={[startPoint.lat, startPoint.lng]} icon={L.divIcon({
-              className: 'custom-icon',
-              html: `<div class="start-marker"></div>`
-            })}>
+          {/* Road stretch markers */}
+          {selectionMode === "roadStretch" && startPoint && (
+            <Marker
+              position={[startPoint.lat, startPoint.lng]}
+              icon={L.divIcon({
+                className: 'custom-icon',
+                html: `<div class="start-marker"></div>`,
+              })}
+            >
               <Popup>Start Point</Popup>
             </Marker>
           )}
 
-          {endPoint && (
-            <Marker position={[endPoint.lat, endPoint.lng]} icon={L.divIcon({
-              className: 'custom-icon',
-              html: `<div class="end-marker"></div>`
-            })}>
+          {selectionMode === "roadStretch" && endPoint && (
+            <Marker
+              position={[endPoint.lat, endPoint.lng]}
+              icon={L.divIcon({
+                className: 'custom-icon',
+                html: `<div class="end-marker"></div>`,
+              })}
+            >
               <Popup>End Point</Popup>
             </Marker>
           )}
 
-          {allData.map((entry, i) => {
-            console.log('🧪 Label:', entry.label); // Add this line for debugging
-
-            return (
-              <Marker
-                key={i}
-                position={[entry.location.lat, entry.location.lng]}
-                icon={L.divIcon({
-                  className: 'custom-icon',
-                  html: `<div style="background:${getColor(entry.label)};width:20px;height:20px;border-radius:50%"></div>`
-                })}
-              >
-                <Popup>
-                  <strong>{entry.label.toUpperCase()}</strong><br />
-                  Lat: {entry.location.lat}<br />
-                  Lng: {entry.location.lng}
-                </Popup>
-              </Marker>
-            );
-          })}
-
+          {/* Markers for all detected data points */}
+          {allData.map((entry, i) => (
+            <Marker
+              key={i}
+              position={[entry.location.lat, entry.location.lng]}
+              icon={L.divIcon({
+                className: 'custom-icon',
+                html: `<div style="background:${getColor(entry.label)};width:20px;height:20px;border-radius:50%"></div>`,
+              })}
+            >
+              <Popup>
+                <strong>{entry.label.toUpperCase()}</strong><br />
+                Lat: {entry.location.lat}<br />
+                Lng: {entry.location.lng}
+              </Popup>
+            </Marker>
+          ))}
         </MapContainer>
       </div>
     </div>
