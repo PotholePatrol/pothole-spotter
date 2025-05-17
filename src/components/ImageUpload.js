@@ -1,28 +1,38 @@
-// src/components/ImageUpload.js
 import React, { useState } from 'react';
 
-const ImageUpload = ({ onImageSelect }) => {
-  const [preview, setPreview] = useState(null);
+const ImageUpload = ({ onImagesSelect }) => {
+  const [previews, setPreviews] = useState([]);
 
   const handleChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      onImageSelect(file);
-      setPreview(URL.createObjectURL(file));
-    }
+    const files = Array.from(e.target.files);
+    onImagesSelect(files);
+
+    const previewUrls = files.map(file => URL.createObjectURL(file));
+    setPreviews(previewUrls);
   };
 
   return (
-    <div style={{ margin: '2rem 0' }}>
-      <label>
-        Upload Road Image:
-        <input type="file" accept="image/*" onChange={handleChange} />
-      </label>
-      {preview && (
-        <div style={{ marginTop: '1rem' }}>
-          <img src={preview} alt="preview" width="300px" />
-        </div>
-      )}
+    <div className="upload-box">
+      <label htmlFor="imageUpload" className="upload-label">📷 Upload Road Images:</label>
+      <input
+        type="file"
+        id="imageUpload"
+        multiple
+        accept="image/*"
+        onChange={handleChange}
+        className="upload-input"
+      />
+
+      <div className="preview-container">
+        {previews.map((src, i) => (
+          <img
+            key={i}
+            src={src}
+            alt={`Preview ${i}`}
+            className="preview-image"
+          />
+        ))}
+      </div>
     </div>
   );
 };
