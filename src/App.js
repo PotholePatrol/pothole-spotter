@@ -47,9 +47,8 @@ function App() {
   const [predictions, setPredictions] = useState([]);
   const [startPoint, setStartPoint] = useState(null);
   const [endPoint, setEndPoint] = useState(null);
-  const [selectionMode, setSelectionMode] = useState("points"); // "points" or "roadStretch"
+  const [selectionMode, setSelectionMode] = useState("points");
 
-  // Toggle selection mode + clear coords to avoid confusion
   const toggleSelectionMode = () => {
     if (selectionMode === "points") {
       setLocation(null);
@@ -70,8 +69,12 @@ function App() {
       return;
     }
 
-    // For now, sending just location or startPoint coords for each image
     const coords = selectionMode === "points" ? location : startPoint;
+
+    if (!coords || !coords.lat || !coords.lng) {
+      alert("Coordinates missing. Please reselect location.");
+      return;
+    }
 
     const results = [];
 
@@ -81,13 +84,26 @@ function App() {
       formData.append('lat', coords.lat);
       formData.append('lng', coords.lng);
 
+      // Debug log before sending
+      console.log("📤 Sending file:", file.name);
+      console.log("📍 Location:", coords.lat, coords.lng);
+
       try {
         const res = await fetch('http://localhost:5000/analyze', {
           method: 'POST',
           body: formData,
         });
 
-        const data = await res.json();
+        let data;
+        try {
+          data = await res.json();
+        } catch (jsonErr) {
+          const rawText = await res.text();
+          console.error("❌ Failed to parse JSON:", jsonErr);
+          console.error("🪵 Raw response text:", rawText);
+          alert('Server sent an invalid response. Check backend logs.');
+          continue;
+        }
 
         if (!res.ok) {
           console.error('❌ Backend error:', data.error);
@@ -109,7 +125,6 @@ function App() {
     }
   };
 
-  // Color code for marker based on label severity
   const getColor = (label) => {
     const normalized = label.toLowerCase();
     if (normalized.includes('major')) return 'red';
@@ -128,8 +143,8 @@ function App() {
       <ImageUpload onImagesSelect={setImageFiles} />
 
       <p className="map-instruction">
-        {selectionMode === "points" 
-          ? "Click on the map to select pothole location 📍" 
+        {selectionMode === "points"
+          ? "Click on the map to select pothole location 📍"
           : "Click twice on the map to select Start and End points for road stretch 📍📍"}
       </p>
 
@@ -161,14 +176,12 @@ function App() {
             <RoadStretchSelector start={startPoint} end={endPoint} setStart={setStartPoint} setEnd={setEndPoint} />
           )}
 
-          {/* Single location marker */}
           {selectionMode === "points" && location && (
             <Marker position={[location.lat, location.lng]}>
               <Popup>Selected Location</Popup>
             </Marker>
           )}
 
-          {/* Road stretch markers */}
           {selectionMode === "roadStretch" && startPoint && (
             <Marker
               position={[startPoint.lat, startPoint.lng]}
@@ -193,7 +206,6 @@ function App() {
             </Marker>
           )}
 
-          {/* Markers for all detected data points */}
           {allData.map((entry, i) => (
             <Marker
               key={i}

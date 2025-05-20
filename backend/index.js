@@ -1,5 +1,4 @@
-// backend/index.js
-require('dotenv').config(); 
+require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
@@ -7,7 +6,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const axios = require('axios');
-const mysql = require('mysql2/promise');  // changed to promise version
+const mysql = require('mysql2/promise');
 
 console.log("🔥🔥🔥 Backend restarted and running latest code");
 
@@ -19,12 +18,12 @@ console.log('📸 ITERATION_NAME:', process.env.ITERATION_NAME);
 const app = express();
 const PORT = 5000;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// MySQL DB connection (promise style)
+// MySQL DB connection pool
 let db;
+
 async function initDb() {
   try {
     db = await mysql.createPool({
@@ -39,11 +38,11 @@ async function initDb() {
     console.log('✅ Connected to MySQL database');
   } catch (err) {
     console.error('❌ MySQL connection error:', err.message);
+    process.exit(1); // Exit if DB connection fails
   }
 }
-initDb();
 
-// File storage config
+// Multer setup
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadPath = './uploads';
@@ -54,10 +53,9 @@ const storage = multer.diskStorage({
     cb(null, `pothole-${Date.now()}${path.extname(file.originalname)}`);
   },
 });
-
 const upload = multer({ storage });
 
-// POST route to handle upload + location
+// Analyze endpoint
 app.post('/analyze', upload.single('image'), async (req, res) => {
   try {
     const imageFile = req.file;
@@ -82,52 +80,40 @@ app.post('/analyze', upload.single('image'), async (req, res) => {
     const endpoint = process.env.ENDPOINT.replace(/\/$/, '');
     const url = `${endpoint}/customvision/v3.0/Prediction/${process.env.PROJECT_ID}/classify/iterations/${process.env.ITERATION_NAME}/image`;
 
-    // Azure request debug
-    console.log('➡️ Sending to Azure:', url);
-    console.log('➡️ Headers:', {
-      'Content-Type': 'application/octet-stream',
-      'Prediction-Key': process.env.PREDICTION_KEY,
+    const response = await axios.post(url, imageBuffer, {
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'Prediction-Key': process.env.PREDICTION_KEY,
+      },
     });
-    console.log('➡️ Image Buffer length:', imageBuffer.length);
-
-    const response = await axios.post(
-      url,
-      imageBuffer,
-      {
-        headers: {
-          'Content-Type': 'application/octet-stream',
-          'Prediction-Key': process.env.PREDICTION_KEY,
-        },
-      }
-    );
 
     const topPrediction = response.data.predictions[0];
     const label = topPrediction.tagName;
     const confidence = topPrediction.probability;
     const imagePath = imageFile.path;
 
-    // Insert into database
     const sql = `INSERT INTO detections 
       (label, image_url, lat, lng, stretch_start_lat, stretch_start_lng, stretch_end_lat, stretch_end_lng) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
 
-    await db.query(
-      sql,
-      [
-        label,
-        imagePath,
-        parsedLat,
-        parsedLng,
-        parseFloat(stretchStartLat) || null,
-        parseFloat(stretchStartLng) || null,
-        parseFloat(stretchEndLat) || null,
-        parseFloat(stretchEndLng) || null,
-      ]
-    );
+    if (!db) {
+      throw new Error('Database pool not initialized');
+    }
 
+    console.log('💾 Running DB query...');
+    await db.query(sql, [
+      label,
+      imagePath,
+      parsedLat,
+      parsedLng,
+      parseFloat(stretchStartLat) || null,
+      parseFloat(stretchStartLng) || null,
+      parseFloat(stretchEndLat) || null,
+      parseFloat(stretchEndLng) || null,
+    ]);
     console.log('✅ Detection saved to DB');
 
-    // Clean up
+    // Optional: Clean up image file after saving
     fs.unlinkSync(imagePath);
 
     res.json({
@@ -137,23 +123,34 @@ app.post('/analyze', upload.single('image'), async (req, res) => {
     });
   } catch (err) {
     console.error('🔥 Error during analysis:', err.message);
-
     if (err.response) {
-      console.error('Azure API response error:', err.response.data);
+      console.error('Azure API error:', err.response.data);
     } else if (err.request) {
-      console.error('No response received:', err.request);
+      console.error('Azure API no response:', err.request);
     } else {
-      console.error('Other error:', err);
+      console.error('Unhandled error:', err);
     }
-
     res.status(500).json({ error: 'Server error during analysis' });
   }
 });
 
-// NEW ROUTE: Get detection info by ID
+// Fetch all detections
+app.get('/detections', async (req, res) => {
+  try {
+    if (!db) throw new Error('Database pool not initialized');
+    const [results] = await db.query('SELECT * FROM detections ORDER BY created_at DESC');
+    res.json(results);
+  } catch (err) {
+    console.error('❌ Failed to fetch detections:', err.message);
+    res.status(500).json({ error: 'Database error fetching detections' });
+  }
+});
+
+// Fetch detection by ID
 app.get('/detections/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    if (!db) throw new Error('Database pool not initialized');
     const [rows] = await db.query('SELECT * FROM detections WHERE id = ?', [id]);
 
     if (rows.length === 0) {
@@ -167,21 +164,11 @@ app.get('/detections/:id', async (req, res) => {
   }
 });
 
-// backend/index.js
-
-// Add this GET endpoint for fetching all detections
-app.get('/detections', (req, res) => {
-  const sql = 'SELECT * FROM detections ORDER BY created_at DESC';
-  db.query(sql, (err, results) => {
-    if (err) {
-      console.error('❌ Failed to fetch detections:', err.message);
-      return res.status(500).json({ error: 'Database error fetching detections' });
-    }
-    res.json(results);
+async function startServer() {
+  await initDb(); // wait for DB pool ready
+  app.listen(PORT, () => {
+    console.log(`🚀 Backend running on http://localhost:${PORT}`);
   });
-});
+}
 
-
-app.listen(PORT, () => {
-  console.log(`🚀 Backend running on http://localhost:${PORT}`);
-});
+startServer();
