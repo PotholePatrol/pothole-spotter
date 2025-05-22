@@ -1,10 +1,12 @@
+// App.js
 import React, { useState } from 'react';
 import ImageUpload from './components/ImageUpload';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import AnalysisSummary from './components/AnalysisSummary';
-import './App.css';
+import './App.css'; // Make sure Modal CSS is in here or import Modal.css separately
+// If Modal.css separate, do: import './Modal.css';
 
 // Fix leaflet icon loading for webpack
 delete L.Icon.Default.prototype._getIconUrl;
@@ -48,6 +50,7 @@ function App() {
   const [startPoint, setStartPoint] = useState(null);
   const [endPoint, setEndPoint] = useState(null);
   const [selectionMode, setSelectionMode] = useState("points");
+  const [modalData, setModalData] = useState(null); // modal state
 
   const toggleSelectionMode = () => {
     if (selectionMode === "points") {
@@ -97,6 +100,8 @@ function App() {
         let data;
         try {
           data = await res.json();
+          console.log("🔥 Backend response:", data);
+
         } catch (jsonErr) {
           const rawText = await res.text();
           console.error("❌ Failed to parse JSON:", jsonErr);
@@ -214,16 +219,41 @@ function App() {
                 className: 'custom-icon',
                 html: `<div style="background:${getColor(entry.label)};width:20px;height:20px;border-radius:50%"></div>`,
               })}
+              eventHandlers={{
+                click: () => setModalData(entry),
+              }}
             >
               <Popup>
-                <strong>{entry.label.toUpperCase()}</strong><br />
-                Lat: {entry.location.lat}<br />
-                Lng: {entry.location.lng}
+                <strong>Label:</strong> {entry.label.toUpperCase()} <br />
+                <strong>Confidence:</strong> {(entry.confidence * 100).toFixed(2)}% <br />
+                <strong>Lat:</strong> {entry.location.lat.toFixed(5)} <br />
+                <strong>Lng:</strong> {entry.location.lng.toFixed(5)} <br />
+                {entry.image_url && (
+                  <img
+                    src={entry.image_url}
+                    alt="Detected"
+                    style={{ width: '100%', borderRadius: '8px', marginTop: '0.5rem' }}
+                  />
+                )}
               </Popup>
+
             </Marker>
           ))}
         </MapContainer>
       </div>
+
+      {/* Modal */}
+      {modalData && (
+        <div className="detection-modal">
+          <button className="close-btn" onClick={() => setModalData(null)}>✖</button>
+          <h3>{modalData.label.toUpperCase()}</h3>
+          {modalData.image_url && (
+            <img src={modalData.image_url} alt={modalData.label} />
+          )}
+          <p><strong>Latitude:</strong> {modalData.location.lat.toFixed(4)}</p>
+          <p><strong>Longitude:</strong> {modalData.location.lng.toFixed(4)}</p>
+        </div>
+      )}
     </div>
   );
 }
