@@ -1,12 +1,12 @@
 // App.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ImageUpload from './components/ImageUpload';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import AnalysisSummary from './components/AnalysisSummary';
-import './App.css'; // Make sure Modal CSS is in here or import Modal.css separately
-// If Modal.css separate, do: import './Modal.css';
+import './App.css';
+import Footer from './components/footer';
 
 // Fix leaflet icon loading for webpack
 delete L.Icon.Default.prototype._getIconUrl;
@@ -50,7 +50,24 @@ function App() {
   const [startPoint, setStartPoint] = useState(null);
   const [endPoint, setEndPoint] = useState(null);
   const [selectionMode, setSelectionMode] = useState("points");
-  const [modalData, setModalData] = useState(null); // modal state
+  const [modalData, setModalData] = useState(null);
+
+  // Close modal on Escape key
+  useEffect(() => {
+    function handleEscape(e) {
+      if (e.key === "Escape") setModalData(null);
+    }
+    if (modalData) {
+      window.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden'; // Prevent scroll on modal open
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      window.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = '';
+    };
+  }, [modalData]);
 
   const toggleSelectionMode = () => {
     if (selectionMode === "points") {
@@ -87,7 +104,6 @@ function App() {
       formData.append('lat', coords.lat);
       formData.append('lng', coords.lng);
 
-      // Debug log before sending
       console.log("📤 Sending file:", file.name);
       console.log("📍 Location:", coords.lat, coords.lng);
 
@@ -101,7 +117,6 @@ function App() {
         try {
           data = await res.json();
           console.log("🔥 Backend response:", data);
-
         } catch (jsonErr) {
           const rawText = await res.text();
           console.error("❌ Failed to parse JSON:", jsonErr);
@@ -137,6 +152,13 @@ function App() {
     return 'green';
   };
 
+  // Modal background click closes modal
+  const handleModalBackgroundClick = (e) => {
+    if (e.target.classList.contains('detection-modal-overlay')) {
+      setModalData(null);
+    }
+  };
+
   return (
     <div className="app-container">
       <h1 className="app-title">🛠️ SmartRoads System</h1>
@@ -145,7 +167,7 @@ function App() {
         Switch to {selectionMode === "points" ? "Road Stretch Selection" : "Single Point Selection"}
       </button>
 
-      <ImageUpload onImagesSelect={setImageFiles} />
+      <ImageUpload onImagesSelect={setImageFiles}/>
 
       <p className="map-instruction">
         {selectionMode === "points"
@@ -172,7 +194,17 @@ function App() {
       <AnalysisSummary predictions={predictions} />
 
       <div className="map-wrapper" style={{ height: '500px', width: '100%' }}>
-        <MapContainer center={[-1.286389, 36.817223]} zoom={12} style={{ height: '100%', width: '100%' }}>
+        <MapContainer
+          center={[-1.286389, 36.817223]}
+          zoom={13}
+          style={{
+            height: '100%',
+            width: '100%'
+          }}
+          whenCreated={(map) => {
+            map.on('click', () => setModalData(null));
+          }}
+        >
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
           {selectionMode === "points" ? (
@@ -222,36 +254,51 @@ function App() {
               eventHandlers={{
                 click: () => setModalData(entry),
               }}
-            >
-              <Popup>
-                <strong>Label:</strong> {entry.label.toUpperCase()} <br />
-                <strong>Confidence:</strong> {(entry.confidence * 100).toFixed(2)}% <br />
-                <strong>Lat:</strong> {entry.location.lat.toFixed(5)} <br />
-                <strong>Lng:</strong> {entry.location.lng.toFixed(5)} <br />
-                {entry.image_url && (
-                  <img
-                    src={entry.image_url}
-                    alt="Detected"
-                    style={{ width: '100%', borderRadius: '8px', marginTop: '0.5rem' }}
-                  />
-                )}
-              </Popup>
-
-            </Marker>
+            />
           ))}
+
         </MapContainer>
+  
+        <div className="App">
+
+      
+
+    </div>
+    {/* Footer */}
+
       </div>
+      <Footer />
+          
 
       {/* Modal */}
       {modalData && (
-        <div className="detection-modal">
-          <button className="close-btn" onClick={() => setModalData(null)}>✖</button>
-          <h3>{modalData.label.toUpperCase()}</h3>
-          {modalData.image_url && (
-            <img src={modalData.image_url} alt={modalData.label} />
-          )}
-          <p><strong>Latitude:</strong> {modalData.location.lat.toFixed(4)}</p>
-          <p><strong>Longitude:</strong> {modalData.location.lng.toFixed(4)}</p>
+        <div className="detection-modal-overlay" onClick={handleModalBackgroundClick}>
+          <div className="detection-modal">
+            <button className="close-btn" onClick={() => setModalData(null)}>&times;</button>
+            <h2>{modalData.label}</h2>
+            {/* Support multiple images */}
+            {modalData.images && modalData.images.length > 0 ? (
+              modalData.images.map((img, idx) => (
+                <img
+                  key={idx}
+                  src={img}
+                  alt={`${modalData.label} ${idx + 1}`}
+                  className="modal-image"
+                />
+              ))
+            ) : (
+              <img
+                src={modalData.image_url}
+                alt={modalData.label}
+                className="modal-image"
+              />
+            )}
+            <p>
+              <strong>Location: </strong>
+              {modalData.location ? `${modalData.location.lat}, ${modalData.location.lng}` : "Unknown"}
+            </p>
+            <p><strong>Detected At: </strong>{modalData.created_at || "Unknown"}</p>
+          </div>
         </div>
       )}
     </div>
