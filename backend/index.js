@@ -18,12 +18,15 @@ console.log('📸 ITERATION_NAME:', process.env.ITERATION_NAME);
 const app = express();
 const PORT = 5000;
 
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-// MySQL DB connection pool
-let db;
+// Serve uploads folder statically so frontend can access images
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// MySQL DB connection (promise style)
+let db;
 async function initDb() {
   try {
     db = await mysql.createPool({
@@ -38,11 +41,11 @@ async function initDb() {
     console.log('✅ Connected to MySQL database');
   } catch (err) {
     console.error('❌ MySQL connection error:', err.message);
-    process.exit(1); // Exit if DB connection fails
   }
 }
+initDb();
 
-// Multer setup
+// File storage config
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadPath = './uploads';
@@ -53,9 +56,10 @@ const storage = multer.diskStorage({
     cb(null, `pothole-${Date.now()}${path.extname(file.originalname)}`);
   },
 });
+
 const upload = multer({ storage });
 
-// Analyze endpoint
+// POST route to handle upload + location
 app.post('/analyze', upload.single('image'), async (req, res) => {
   try {
     const imageFile = req.file;
@@ -80,77 +84,85 @@ app.post('/analyze', upload.single('image'), async (req, res) => {
     const endpoint = process.env.ENDPOINT.replace(/\/$/, '');
     const url = `${endpoint}/customvision/v3.0/Prediction/${process.env.PROJECT_ID}/classify/iterations/${process.env.ITERATION_NAME}/image`;
 
-    const response = await axios.post(url, imageBuffer, {
-      headers: {
-        'Content-Type': 'application/octet-stream',
-        'Prediction-Key': process.env.PREDICTION_KEY,
-      },
+    // Azure request debug
+    console.log('➡️ Sending to Azure:', url);
+    console.log('➡️ Headers:', {
+      'Content-Type': 'application/octet-stream',
+      'Prediction-Key': process.env.PREDICTION_KEY,
     });
+    console.log('➡️ Image Buffer length:', imageBuffer.length);
+    console.log('Image buffer size:', imageBuffer.length);   
+    if(imageBuffer.length === 0) throw new Error('Image buffer is empty');
+
+
+    const response = await axios.post(
+      url,
+      imageBuffer,
+      {
+        headers: {
+          'Content-Type': 'application/octet-stream',
+          'Prediction-Key': process.env.PREDICTION_KEY,
+        },
+      }
+    );
 
     const topPrediction = response.data.predictions[0];
     const label = topPrediction.tagName;
     const confidence = topPrediction.probability;
     const imagePath = imageFile.path;
 
+    // Insert into database
     const sql = `INSERT INTO detections 
       (label, image_url, lat, lng, stretch_start_lat, stretch_start_lng, stretch_end_lat, stretch_end_lng) 
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
 
-    if (!db) {
-      throw new Error('Database pool not initialized');
-    }
+    await db.query(
+      sql,
+      [
+        label,
+        imagePath,
+        parsedLat,
+        parsedLng,
+        parseFloat(stretchStartLat) || null,
+        parseFloat(stretchStartLng) || null,
+        parseFloat(stretchEndLat) || null,
+        parseFloat(stretchEndLng) || null,
+      ]
+    );
 
-    console.log('💾 Running DB query...');
-    await db.query(sql, [
-      label,
-      imagePath,
-      parsedLat,
-      parsedLng,
-      parseFloat(stretchStartLat) || null,
-      parseFloat(stretchStartLng) || null,
-      parseFloat(stretchEndLat) || null,
-      parseFloat(stretchEndLng) || null,
-    ]);
     console.log('✅ Detection saved to DB');
 
-    // Optional: Clean up image file after saving
-    fs.unlinkSync(imagePath);
+    // Build public image URL for frontend
+    const imageUrl = `http://localhost:${PORT}/uploads/${path.basename(imagePath)}`;
+
+    // DON’T delete the file immediately — let frontend fetch it
+    // Optionally: delete after some delay or cleanup script later
 
     res.json({
       label,
       confidence,
       location: { lat: parsedLat, lng: parsedLng },
+      imageUrl,
     });
   } catch (err) {
     console.error('🔥 Error during analysis:', err.message);
+
     if (err.response) {
-      console.error('Azure API error:', err.response.data);
+      console.error('Azure API response error:', err.response.data);
     } else if (err.request) {
-      console.error('Azure API no response:', err.request);
+      console.error('No response received:', err.request);
     } else {
-      console.error('Unhandled error:', err);
+      console.error('Other error:', err);
     }
+
     res.status(500).json({ error: 'Server error during analysis' });
   }
 });
 
-// Fetch all detections
-app.get('/detections', async (req, res) => {
-  try {
-    if (!db) throw new Error('Database pool not initialized');
-    const [results] = await db.query('SELECT * FROM detections ORDER BY created_at DESC');
-    res.json(results);
-  } catch (err) {
-    console.error('❌ Failed to fetch detections:', err.message);
-    res.status(500).json({ error: 'Database error fetching detections' });
-  }
-});
-
-// Fetch detection by ID
+// Get detection by ID
 app.get('/detections/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    if (!db) throw new Error('Database pool not initialized');
     const [rows] = await db.query('SELECT * FROM detections WHERE id = ?', [id]);
 
     if (rows.length === 0) {
@@ -164,11 +176,45 @@ app.get('/detections/:id', async (req, res) => {
   }
 });
 
-async function startServer() {
-  await initDb(); // wait for DB pool ready
-  app.listen(PORT, () => {
-    console.log(`🚀 Backend running on http://localhost:${PORT}`);
-  });
-}
+// Get all detections (fixed to async/await)
+app.get('/detections', async (req, res) => {
+  try {
+    const [results] = await db.query('SELECT * FROM detections ORDER BY created_at DESC');
+    res.json(results);
+  } catch (err) {
+    console.error('❌ Failed to fetch detections:', err.message);
+    res.status(500).json({ error: 'Database error fetching detections' });
+  }
+});
 
-startServer();
+// Get detection by lat & lng for map marker click
+app.get('/api/spot', async (req, res) => {
+  const { lat, lng } = req.query;
+
+  if (!lat || !lng) {
+    return res.status(400).json({ error: 'Missing latitude or longitude' });
+  }
+
+  try {
+    const [rows] = await db.query(
+      `SELECT * FROM detections 
+       WHERE lat = ? AND lng = ? 
+       ORDER BY created_at DESC`,
+      [parseFloat(lat), parseFloat(lng)]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: 'No data available yet.' });
+    }
+
+    res.json(rows);  // send all detections, not just one
+  } catch (err) {
+    console.error('🔥 Error fetching spot info:', err.message);
+    res.status(500).json({ error: 'Server error fetching spot info' });
+  }
+});
+
+
+app.listen(PORT, () => {
+  console.log(`🚀 Backend running on http://localhost:${PORT}`);
+});
