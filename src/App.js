@@ -7,6 +7,8 @@ import 'leaflet/dist/leaflet.css';
 import AnalysisSummary from './components/AnalysisSummary';
 import './App.css';
 import Footer from './components/footer';
+import RoadHeroSection from './components/RoadHeroSection';
+
 
 // Fix leaflet icon loading for webpack
 delete L.Icon.Default.prototype._getIconUrl;
@@ -158,26 +160,31 @@ function App() {
       setModalData(null);
     }
   };
-
+                                                                                                                                                 
   return (
     <div className="app-container">
       <h1 className="app-title">🛠️ SmartRoads System</h1>
 
-      <button className="toggle-btn" onClick={toggleSelectionMode}>
-        Switch to {selectionMode === "points" ? "Road Stretch Selection" : "Single Point Selection"}
-      </button>
+      {/* 👇 Your hero background section */}
+      <RoadHeroSection />
+
+     
 
       <ImageUpload onImagesSelect={setImageFiles}/>
-
-      <p className="map-instruction">
-        {selectionMode === "points"
-          ? "Click on the map to select pothole location 📍"
-          : "Click twice on the map to select Start and End points for road stretch 📍📍"}
-      </p>
-
-      <button className="upload-btn" onClick={handleUpload}>
-        Analyze Images
-      </button>
+      
+       <div class="btns">
+              <p className="map-instruction">
+              {selectionMode === "points"
+                ? "Click on the map to select pothole location 📍"
+                : "Click twice on the map to select Start and End points for road stretch 📍📍"}
+            </p>
+            <button className="toggle-btn" onClick={toggleSelectionMode}>
+            Switch to {selectionMode === "points" ? "Road Stretch Selection" : "Single Point Selection"}
+            </button>
+            <button className="upload-btn" onClick={handleUpload}>
+              Analyze Images
+            </button>
+        </div>
 
       {result && (
         <div className="result-box">
@@ -268,7 +275,7 @@ function App() {
 
       </div>
       <Footer />
-          
+
 
       {/* Modal */}
       {modalData && (

@@ -36,7 +36,6 @@ const MapSelector = ({ onPointsChange, detections }) => {
   const [selectionMode, setSelectionMode] = useState('points');
   const [points, setPoints] = useState([]);
 
-  // New states for marker click and data fetch
   const [selectedId, setSelectedId] = useState(null);
   const [selectedDetection, setSelectedDetection] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -50,7 +49,6 @@ const MapSelector = ({ onPointsChange, detections }) => {
     }
   }, [points, selectionMode, onPointsChange]);
 
-  // Fetch detection info on marker click
   useEffect(() => {
     if (!selectedId) return;
 
@@ -73,14 +71,14 @@ const MapSelector = ({ onPointsChange, detections }) => {
   }, [selectedId]);
 
   return (
-    <div>
+    <div className="p-4 bg-white rounded-lg shadow-md">
       {/* Selection Mode Toggle */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-800 mb-3">
           Select Road Area:
         </label>
-        <div className="flex gap-4">
-          <label className="flex items-center">
+        <div className="flex gap-6">
+          <label className="inline-flex items-center text-sm text-gray-700">
             <input
               type="radio"
               value="points"
@@ -91,11 +89,11 @@ const MapSelector = ({ onPointsChange, detections }) => {
                 setSelectedDetection(null);
                 setSelectedId(null);
               }}
-              className="mr-2"
+              className="text-black focus:ring-2 focus:ring-yellow-500"
             />
-            Start & End Points
+            <span className="ml-2">Start & End Points</span>
           </label>
-          <label className="flex items-center">
+          <label className="inline-flex items-center text-sm text-gray-500 cursor-not-allowed">
             <input
               type="radio"
               value="area"
@@ -106,7 +104,8 @@ const MapSelector = ({ onPointsChange, detections }) => {
                 setSelectedDetection(null);
                 setSelectedId(null);
               }}
-              className="mr-2"
+              className="text-black mr-2"
+              disabled
             />
             Draw Area on Map (coming soon)
           </label>
@@ -114,87 +113,76 @@ const MapSelector = ({ onPointsChange, detections }) => {
       </div>
 
       {/* Map */}
-      <MapContainer
-        center={[-1.286389, 36.817223]}
-        zoom={13}
-        style={{ height: '400px', width: '100%' }}
-      >
-        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      <div className="rounded-lg overflow-hidden border border-gray-300 shadow">
+        <MapContainer
+          center={[-1.286389, 36.817223]}
+          zoom={13}
+          style={{ height: '400px', width: '100%' }}
+          className="z-0"
+        >
+          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
-        {/* Points selector mode */}
-        {selectionMode === 'points' && (
-          <>
-            <PointsSelector points={points} setPoints={setPoints} />
+          {selectionMode === 'points' && (
+            <>
+              <PointsSelector points={points} setPoints={setPoints} />
 
-            {/* Render pothole markers */}
-            {detections &&
-              detections.map((det) => (
-                <Marker
-                  key={det.id}
-                  position={[det.lat, det.lng]}
-                  eventHandlers={{
-                    click: () => setSelectedId(det.id),
-                  }}
-                />
-              ))}
-          </>
-        )}
-
-        {/* TODO: area drawing */}
-      </MapContainer>
+              {detections &&
+                detections.map((det) => (
+                  <Marker
+                    key={det.id}
+                    position={[det.lat, det.lng]}
+                    eventHandlers={{
+                      click: () => setSelectedId(det.id),
+                    }}
+                  />
+                ))}
+            </>
+          )}
+        </MapContainer>
+      </div>
 
       {/* Selected points info */}
       {selectionMode === 'points' && points.length > 0 && (
-        <div className="mt-2 text-sm text-gray-600">
+        <div className="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
           <p>
-            Selected Points: {points.length} (
-            {points.map((p) => `${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}`).join(' | ')}
-            )
+            <strong>Selected Points:</strong> {points.length} (
+            {points.map((p) => `${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}`).join(' | ')})
           </p>
-          {points.length === 2 && <p>Ready to upload images for this stretch.</p>}
+          {points.length === 2 && (
+            <p className="text-green-600 mt-1">Ready to upload images for this stretch.</p>
+          )}
         </div>
       )}
 
-      {/* Modal or sidebar for selected detection */}
+      {/* Modal for selected detection */}
       {selectedId && (
-        <div
-          style={{
-            position: 'fixed',
-            top: '10%',
-            right: '10%',
-            backgroundColor: 'white',
-            border: '1px solid #ccc',
-            borderRadius: '8px',
-            padding: '1rem',
-            width: '300px',
-            zIndex: 1000,
-          }}
-        >
-          <button
-            onClick={() => {
-              setSelectedId(null);
-              setSelectedDetection(null);
-              setError(null);
-            }}
-            style={{ float: 'right', cursor: 'pointer' }}
-          >
-            ✖
-          </button>
-          {loading && <p>Loading...</p>}
-          {error && <p style={{ color: 'red' }}>Error: {error}</p>}
+        <div className="fixed top-12 right-10 bg-white border border-gray-300 rounded-xl shadow-lg p-6 w-80 z-50">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-gray-800">Detection Details</h3>
+            <button
+              onClick={() => {
+                setSelectedId(null);
+                setSelectedDetection(null);
+                setError(null);
+              }}
+              className="text-gray-500 hover:text-red-600 font-bold text-lg"
+            >
+              ✖
+            </button>
+          </div>
+          {loading && <p className="text-sm text-gray-500">Loading...</p>}
+          {error && <p className="text-sm text-red-500">Error: {error}</p>}
           {selectedDetection && (
-            <div>
-              <h3 className="font-bold mb-2">Detection Details</h3>
-              <p><strong>ID:</strong> {selectedDetection.id}</p>
-              <p><strong>Label:</strong> {selectedDetection.label}</p>
-              <p><strong>Latitude:</strong> {selectedDetection.lat}</p>
-              <p><strong>Longitude:</strong> {selectedDetection.lng}</p>
-              {/* Add more fields as needed */}
+            <div className="text-sm text-gray-700">
+              <p><span className="font-medium">ID:</span> {selectedDetection.id}</p>
+              <p><span className="font-medium">Label:</span> {selectedDetection.label}</p>
+              <p><span className="font-medium">Latitude:</span> {selectedDetection.lat}</p>
+              <p><span className="font-medium">Longitude:</span> {selectedDetection.lng}</p>
               {selectedDetection.image_url && (
                 <img
                   src={selectedDetection.image_url}
                   alt="Detection"
-                  style={{ width: '100%', marginTop: '0.5rem', borderRadius: '4px' }}
+                  className="mt-3 w-full rounded-md border border-gray-200"
                 />
               )}
             </div>
