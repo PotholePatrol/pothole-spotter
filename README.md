@@ -1,70 +1,97 @@
-# Getting Started with Create React App
+# 🕳️ Pothole Spotter
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Pothole Spotter is an AI-powered web app that detects, classifies, and visualizes potholes on Kenyan roads. Users upload road images with geo-coordinates, and the system identifies potholes using Azure Custom Vision, displaying results on an interactive map.
 
-## Available Scripts
+---
 
-In the project directory, you can run:
+## 🚀 Features
 
-### `npm start`
+- Upload road images with GPS data
+- AI-based classification using Azure Custom Vision
+- Visualize potholes on a Leaflet map with severity markers
+- View details on marker click (image, status, timestamp)
+- Define road stretches and analyze multiple images
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+---
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## 🧑‍💻 Tech Stack
 
-### `npm test`
+- **Frontend**: React, Leaflet, TailwindCSS
+- **Backend**: Node.js, Express.js
+- **AI/ML**: Azure Custom Vision (image classification)
+- **Database**: MySQL (smartroads > detections table)
+- **Storage**: Static file server / cloud for image uploads
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+---
 
-### `npm run build`
+## 📂 Project Structure
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```bash
+pothole-spotter/
+├── client/              # React frontend
+│   └── src/
+├── server/              # Express backend
+│   └── uploads/         # Uploaded image storage
+├── database/            # SQL scripts / schema
+├── .env                 # Environment variables
+├── README.md            # You’re here 😎
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+---
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## 🛠️ Setup & Run
 
-### `npm run eject`
+### Prerequisites:
+- Node.js
+- MySQL
+- Azure Custom Vision account
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+### Backend:
+```bash
+cd server
+npm install
+node index.js
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Frontend:
+```bash
+cd client
+npm install
+npm start
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### Env Config (.env example):
+```env
+AZURE_ENDPOINT=https://<your-endpoint>.cognitiveservices.azure.com/
+AZURE_PREDICTION_KEY=<your-key>
+PORT=5000
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+---
 
-## Learn More
+## 🧠 Future Features
+- Admin dashboard for stats and management
+- Export detection data (CSV/PDF)
+- User authentication (optional)
+- Mobile-first UI revamp
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+---
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## 📸 Sample of the page Preview
 
-### Code Splitting
+![image](https://github.com/user-attachments/assets/3fa1570b-5477-4392-bf1b-4a547dcdce69)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+![image](https://github.com/user-attachments/assets/a049d705-7fdd-46d8-ae6e-46b54039ec05)
 
-### Analyzing the Bundle Size
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+---
 
-### Making a Progressive Web App
+## 🤝 Contributing
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+PRs are welcome! If you're vibing with the vision, fork the repo, make changes, and drop that pull request 🔥
 
-### Advanced Configuration
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## 🧾 License
 
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+MIT License © 2025 Steven Muiruri
