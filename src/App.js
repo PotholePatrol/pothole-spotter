@@ -7,6 +7,7 @@ import 'leaflet/dist/leaflet.css';
 import AnalysisSummary from './components/AnalysisSummary';
 import './App.css';
 import Footer from './components/footer';
+import BackgroundSection  from './components/BackgroundSection';
 
 // Fix leaflet icon loading for webpack
 delete L.Icon.Default.prototype._getIconUrl;
@@ -160,12 +161,12 @@ function App() {
   };
 
   return (
-    <div className="app-container">
-      <h1 className="app-title">🛠️ SmartRoads System</h1>
 
-      <button className="toggle-btn" onClick={toggleSelectionMode}>
-        Switch to {selectionMode === "points" ? "Road Stretch Selection" : "Single Point Selection"}
-      </button>
+    <div className="app-container">
+    
+      <h1 className="app-title">🛠️ SmartRoads System</h1>
+    <BackgroundSection />
+      
 
       <ImageUpload onImagesSelect={setImageFiles}/>
 
@@ -175,9 +176,16 @@ function App() {
           : "Click twice on the map to select Start and End points for road stretch 📍📍"}
       </p>
 
+          {/* Buttons */}
+      <div className='button-container'>
+        <button className="toggle-btn" onClick={toggleSelectionMode}>
+        Switch to {selectionMode === "points" ? "Road Stretch Selection" : "Single Point Selection"}
+      </button>
+      <br></br>
       <button className="upload-btn" onClick={handleUpload}>
         Analyze Images
       </button>
+      </div>
 
       {result && (
         <div className="result-box">
