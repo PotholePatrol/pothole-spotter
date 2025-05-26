@@ -30,52 +30,35 @@ function MapWithDetections() {
           <div
             key={d.id}
             onClick={() => handleDotClick(d)}
+            className="detection-dot"
             style={{
-              cursor: 'pointer',
-              width: 20,
-              height: 20,
-              borderRadius: '50%',
               backgroundColor:
                 d.label === 'no pothole' ? 'green' :
                 d.label === 'minor pothole' ? 'orange' : 'red',
-              position: 'absolute', // you’ll adjust coords for real map
-              left: `${d.lng}px`,   // placeholder for demo
-              top: `${d.lat}px`,    // placeholder for demo
+              left: `${d.lng}px`, // replace with map logic
+              top: `${d.lat}px`,  // replace with map logic
             }}
             title={`Click for details: ${d.label}`}
           />
+
         ))}
       </div>
 
       {selectedDetection && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 50,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: '#fff',
-            padding: 20,
-            boxShadow: '0 0 10px rgba(0,0,0,0.3)',
-            zIndex: 9999,
-            width: 300,
-          }}
-        >
-          <button onClick={closePopup} style={{ float: 'right' }}>
-            ✖
-          </button>
-          <h2>Detection Info</h2>
-          <p><strong>Label:</strong> {selectedDetection.label}</p>
-          <p><strong>Confidence:</strong> {(selectedDetection.confidence * 100).toFixed(2)}%</p>
-          <p><strong>Location:</strong> {selectedDetection.lat.toFixed(5)}, {selectedDetection.lng.toFixed(5)}</p>
-          {selectedDetection.image_url && (
-            <img
-              src={`http://localhost:5000/${selectedDetection.image_url}`}
-              alt={selectedDetection.label}
-              style={{ maxWidth: '100%' }}
-            />
-          )}
-        </div>
+        <div className="popup-box">
+        <button className="close-btn" onClick={closePopup}>✖</button>
+        <h2>Detection Info</h2>
+        <p><strong>Label:</strong> {selectedDetection.label}</p>
+        <p><strong>Confidence:</strong> {(selectedDetection.confidence * 100).toFixed(2)}%</p>
+        <p><strong>Location:</strong> {selectedDetection.lat.toFixed(5)}, {selectedDetection.lng.toFixed(5)}</p>
+        {selectedDetection.image_url && (
+          <img
+            src={`http://localhost:5000/${selectedDetection.image_url}`}
+            alt={selectedDetection.label}
+          />
+        )}
+      </div>
+
       )}
     </div>
   );

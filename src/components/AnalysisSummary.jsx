@@ -1,10 +1,10 @@
 import React from 'react';
 
 const COLORS = {
-  'Total Images': '#6b7280',    // cool gray
-  'Major Potholes': '#ef4444', // red alert
-  'Minor Potholes': '#f59e0b', // orange vibe
-  'No Potholes': '#10b981',    // chill green
+  'Total Images': '#1f2937',    // slate gray
+  'Major Potholes': '#dc2626',  // deep red
+  'Minor Potholes': '#f59e0b',  // orange
+  'No Potholes': '#16a34a',     // green
 };
 
 const AnalysisSummary = ({ predictions }) => {
@@ -16,18 +16,38 @@ const AnalysisSummary = ({ predictions }) => {
   const none = predictions.filter(p => p === 'no pothole').length;
 
   return (
-    <div style={{
-      background: '#fff',
-      borderRadius: '12px',
-      padding: '1.5rem',
-      boxShadow: '0 6px 12px rgba(0,0,0,0.1)',
-      marginTop: '20px',
-      maxWidth: '600px',
-      marginLeft: 'auto',
-      marginRight: 'auto'
-    }}>
-      <h2 style={{ marginBottom: '1rem', textAlign: 'center' }}>Road Stretch Analysis Summary</h2>
-      <div style={{ display: 'flex', justifyContent: 'space-around', gap: '1rem', flexWrap: 'wrap' }}>
+    <div
+      style={{
+        background: '#fefefe',
+        borderRadius: '16px',
+        padding: '2rem',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+        marginTop: '2rem',
+        maxWidth: '700px',
+        marginLeft: 'auto',
+        marginRight: 'auto',
+        border: '1px solid #DAA52044'
+      }}
+    >
+      <h2
+        style={{
+          marginBottom: '1.5rem',
+          textAlign: 'center',
+          color: '#333',
+          fontSize: '1.5rem',
+        }}
+      >
+        🛣️ Road Stretch Analysis Summary
+      </h2>
+
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-around',
+          gap: '1rem',
+          flexWrap: 'wrap',
+        }}
+      >
         <SummaryBox label="Total Images" count={total} />
         <SummaryBox label="Major Potholes" count={major} />
         <SummaryBox label="Minor Potholes" count={minor} />
@@ -38,16 +58,38 @@ const AnalysisSummary = ({ predictions }) => {
 };
 
 const SummaryBox = ({ label, count }) => (
-  <div style={{
-    backgroundColor: '#f9fafb',
-    borderRadius: '10px',
-    padding: '1rem 1.5rem',
-    textAlign: 'center',
-    width: '140px',
-    boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
-  }}>
-    <h3 style={{ marginBottom: '0.5rem', color: COLORS[label] }}>{label}</h3>
-    <p style={{ fontSize: '1.75rem', fontWeight: '700', color: COLORS[label] }}>{count}</p>
+  <div
+    style={{
+      backgroundColor: '#fffaf0',
+      borderRadius: '12px',
+      padding: '1.25rem 1.5rem',
+      textAlign: 'center',
+      width: '160px',
+      boxShadow: '0 4px 10px rgba(0,0,0,0.06)',
+      transition: 'transform 0.3s ease',
+    }}
+    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+  >
+    <h3
+      style={{
+        marginBottom: '0.5rem',
+        fontSize: '1.1rem',
+        fontWeight: '600',
+        color: COLORS[label],
+      }}
+    >
+      {label}
+    </h3>
+    <p
+      style={{
+        fontSize: '1.9rem',
+        fontWeight: '800',
+        color: COLORS[label],
+      }}
+    >
+      {count}
+    </p>
   </div>
 );
 
