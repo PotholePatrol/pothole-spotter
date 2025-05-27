@@ -23,7 +23,8 @@ return (
             </div>
         </div>
         <div className="footer-dev">
-            Developed by <span className="dev-name">Steven Muiruri</span> • Powered by Azure & React
+            Developed by <span className="dev-name">Steven Muiruri</span> • Powered by Azure & React<br></br>
+            © CodeTarmac 2025
         </div>
     </footer>
 );

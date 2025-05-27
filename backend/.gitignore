@@ -1,0 +1,21 @@
+# Node modules - never push this
+node_modules/
+
+# Environment config - keep secrets outta GitHub
+.env
+
+# Uploads folder (optional, if you don’t want local images pushed)
+uploads/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# IDE/editor junk
+.vscode/
+.idea/
+
+# System files
+.DS_Store
+Thumbs.db
