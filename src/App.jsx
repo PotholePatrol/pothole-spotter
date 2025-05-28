@@ -5,7 +5,8 @@ import Dashboard from './pages/Dashboard.jsx';
 import About from './pages/About';
 import Navbar from './components/Navbar';
 import LoginPage from './pages/loginPage';
-import Footer from  "./components/footer"
+import Footer from  "./components/footer.jsx";
+
 
 function App() {
   return (

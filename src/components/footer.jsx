@@ -108,7 +108,7 @@ function Footer() {
         <div className="border-t border-gray-800 pt-6 flex flex-col md:flex-row justify-between items-center">
           <div className="flex items-center space-x-2 mb-4 md:mb-0">
             <span className="text-gray-500">Developed by</span>
-            <span className="font-medium text-amber-500">Steven Muiruri</span>
+            <span className="font-medium text-amber-500">CodeTarmac</span>
           </div>
           <div className="flex items-center space-x-4">
             <span className="text-gray-500">Powered by</span>

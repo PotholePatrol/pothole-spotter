@@ -12,13 +12,33 @@ const teamMembers = [
     ],
   },
   {
-    name: 'Alex Johnson',
-    role: 'Lead Data Scientist',
+    name: 'Esther Wanjiru',
+    role: 'PM',
     imageUrl: '/images/team/alex.jpg',
     bio: 'Machine learning expert focused on computer vision applications for urban environments.',
     socialLinks: [
       { name: 'GitHub', url: 'https://github.com', icon: FaGithub },
       { name: 'LinkedIn', url: 'https://linkedin.com', icon: FaLinkedin },
+    ],
+  },
+  {
+    name: 'Maria Garcia',
+    role: 'Head of Engineering',
+    imageUrl: '/images/team/maria.jpg',
+    bio: 'Full-stack developer specializing in geospatial applications and IoT systems.',
+    socialLinks: [
+      { name: 'GitHub', url: 'https://github.com', icon: FaGithub },
+      { name: 'Twitter', url: 'https://twitter.com', icon: FaTwitter },
+    ],
+  },
+  {
+    name: 'Maria Garcia',
+    role: 'Head of Engineering',
+    imageUrl: '/images/team/maria.jpg',
+    bio: 'Full-stack developer specializing in geospatial applications and IoT systems.',
+    socialLinks: [
+      { name: 'GitHub', url: 'https://github.com', icon: FaGithub },
+      { name: 'Twitter', url: 'https://twitter.com', icon: FaTwitter },
     ],
   },
   {

@@ -1,23 +1,26 @@
-// src/views/Dashboard.jsx
+// App.jsx
 import React, { useState, useEffect } from 'react';
 import ImageUpload from "./ImageUpload";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import AnalysisSummary from './AnalysisSummary';
-import BackgroundSection from './BackgroundSection';
+import '../App.css';
+import Footer from '../components/Footer';
+import BackgroundSection  from './BackgroundSection';
+import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
+import iconUrl from 'leaflet/dist/images/marker-icon.png';
+import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
 
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
-import markerIcon from 'leaflet/dist/images/marker-icon.png';
-import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 // Fix leaflet icon loading for webpack
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: markerIcon2x,
-  iconUrl: markerIcon,
-  shadowUrl: markerShadow,
+  iconRetinaUrl,
+  iconUrl,
+  shadowUrl,
 });
+
 
 function LocationSelector({ onSelect }) {
   useMapEvents({
@@ -44,7 +47,7 @@ function RoadStretchSelector({ start, end, setStart, setEnd }) {
   return null;
 }
 
-export default function Dashboard() {
+function App() {
   const [imageFiles, setImageFiles] = useState([]);
   const [location, setLocation] = useState(null);
   const [result, setResult] = useState(null);
@@ -55,13 +58,14 @@ export default function Dashboard() {
   const [selectionMode, setSelectionMode] = useState("points");
   const [modalData, setModalData] = useState(null);
 
+  // Close modal on Escape key
   useEffect(() => {
     function handleEscape(e) {
       if (e.key === "Escape") setModalData(null);
     }
     if (modalData) {
       window.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden'; // Prevent scroll on modal open
     } else {
       document.body.style.overflow = '';
     }
@@ -72,8 +76,9 @@ export default function Dashboard() {
   }, [modalData]);
 
   const toggleSelectionMode = () => {
-    if (selectionMode === "points") setLocation(null);
-    else {
+    if (selectionMode === "points") {
+      setLocation(null);
+    } else {
       setStartPoint(null);
       setEndPoint(null);
     }
@@ -81,15 +86,19 @@ export default function Dashboard() {
   };
 
   const handleUpload = async () => {
+    if (selectionMode === "points" && (!imageFiles.length || !location)) {
+      alert('Please upload images and select location');
+      return;
+    }
+    if (selectionMode === "roadStretch" && (!imageFiles.length || !startPoint || !endPoint)) {
+      alert('Please upload images and select start and end points');
+      return;
+    }
+
     const coords = selectionMode === "points" ? location : startPoint;
 
-    if (
-      !imageFiles.length ||
-      !coords?.lat ||
-      !coords?.lng ||
-      (selectionMode === "roadStretch" && !endPoint)
-    ) {
-      alert("Please complete all required selections.");
+    if (!coords || !coords.lat || !coords.lng) {
+      alert("Coordinates missing. Please reselect location.");
       return;
     }
 
@@ -101,22 +110,37 @@ export default function Dashboard() {
       formData.append('lat', coords.lat);
       formData.append('lng', coords.lng);
 
+      console.log("📤 Sending file:", file.name);
+      console.log("📍 Location:", coords.lat, coords.lng);
+
       try {
         const res = await fetch('http://localhost:5000/analyze', {
           method: 'POST',
           body: formData,
         });
 
-        const data = await res.json();
+        let data;
+        try {
+          data = await res.json();
+          console.log("🔥 Backend response:", data);
+        } catch (jsonErr) {
+          const rawText = await res.text();
+          console.error("❌ Failed to parse JSON:", jsonErr);
+          console.error("🪵 Raw response text:", rawText);
+          alert('Server sent an invalid response. Check backend logs.');
+          continue;
+        }
+
         if (!res.ok) {
+          console.error('❌ Backend error:', data.error);
           alert(`Analysis failed: ${data.error}`);
           continue;
         }
 
         results.push(data);
       } catch (err) {
-        console.error("Upload error:", err);
-        alert("Upload failed.");
+        console.error('❌ Upload failed:', err);
+        alert('Upload failed. Check your server or internet.');
       }
     }
 
@@ -128,10 +152,13 @@ export default function Dashboard() {
   };
 
   const getColor = (label) => {
-    const l = label.toLowerCase();
-    return l.includes("major") ? "red" : l.includes("minor") ? "orange" : "green";
+    const normalized = label.toLowerCase();
+    if (normalized.includes('major')) return 'red';
+    if (normalized.includes('minor')) return 'orange';
+    return 'green';
   };
 
+  // Modal background click closes modal
   const handleModalBackgroundClick = (e) => {
     if (e.target.classList.contains('detection-modal-overlay')) {
       setModalData(null);
@@ -139,34 +166,41 @@ export default function Dashboard() {
   };
 
   return (
+
     <div className="app-container">
+    
       <h1 className="app-title">🛠️ SmartRoads System</h1>
-      <BackgroundSection />
-      <ImageUpload onImagesSelect={setImageFiles} />
+    <BackgroundSection />
+      
+
+      <ImageUpload onImagesSelect={setImageFiles}/>
 
       <p className="map-instruction">
         {selectionMode === "points"
           ? "Click on the map to select pothole location 📍"
-          : "Click twice on the map to select Start and End points 📍📍"}
+          : "Click twice on the map to select Start and End points for road stretch 📍📍"}
       </p>
 
+          {/* Buttons */}
       <div className='button-container'>
         <button className="toggle-btn" onClick={toggleSelectionMode}>
-          Switch to {selectionMode === "points" ? "Road Stretch Selection" : "Single Point Selection"}
-        </button>
-        <br />
-        <button className="upload-btn" onClick={handleUpload}>
-          Analyze Images
-        </button>
+        Switch to {selectionMode === "points" ? "Road Stretch Selection" : "Single Point Selection"}
+      </button>
+      <br></br>
+      <button className="upload-btn" onClick={handleUpload}>
+        Analyze Images
+      </button>
       </div>
 
       {result && (
         <div className="result-box">
           <h3>Latest Detection</h3>
           <p><strong>Label:</strong> {result.label}</p>
-          {result.location
-            ? <p><strong>Location:</strong> {result.location.lat}, {result.location.lng}</p>
-            : <p className="error-text">⚠️ Location data missing</p>}
+          {result.location ? (
+            <p><strong>Location:</strong> {result.location.lat}, {result.location.lng}</p>
+          ) : (
+            <p className="error-text">⚠️ Location data missing</p>
+          )}
         </div>
       )}
 
@@ -176,15 +210,21 @@ export default function Dashboard() {
         <MapContainer
           center={[-1.286389, 36.817223]}
           zoom={13}
-          style={{ height: '100%', width: '100%' }}
-          whenCreated={map => map.on('click', () => setModalData(null))}
+          style={{
+            height: '100%',
+            width: '100%'
+          }}
+          whenCreated={(map) => {
+            map.on('click', () => setModalData(null));
+          }}
         >
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
-          {selectionMode === "points"
-            ? <LocationSelector onSelect={setLocation} />
-            : <RoadStretchSelector start={startPoint} end={endPoint} setStart={setStartPoint} setEnd={setEndPoint} />
-          }
+          {selectionMode === "points" ? (
+            <LocationSelector onSelect={setLocation} />
+          ) : (
+            <RoadStretchSelector start={startPoint} end={endPoint} setStart={setStartPoint} setEnd={setEndPoint} />
+          )}
 
           {selectionMode === "points" && location && (
             <Marker position={[location.lat, location.lng]}>
@@ -192,20 +232,26 @@ export default function Dashboard() {
             </Marker>
           )}
 
-          {startPoint && (
-            <Marker position={[startPoint.lat, startPoint.lng]} icon={L.divIcon({
-              className: 'custom-icon',
-              html: `<div class="start-marker"></div>`
-            })}>
+          {selectionMode === "roadStretch" && startPoint && (
+            <Marker
+              position={[startPoint.lat, startPoint.lng]}
+              icon={L.divIcon({
+                className: 'custom-icon',
+                html: `<div class="start-marker"></div>`,
+              })}
+            >
               <Popup>Start Point</Popup>
             </Marker>
           )}
 
-          {endPoint && (
-            <Marker position={[endPoint.lat, endPoint.lng]} icon={L.divIcon({
-              className: 'custom-icon',
-              html: `<div class="end-marker"></div>`
-            })}>
+          {selectionMode === "roadStretch" && endPoint && (
+            <Marker
+              position={[endPoint.lat, endPoint.lng]}
+              icon={L.divIcon({
+                className: 'custom-icon',
+                html: `<div class="end-marker"></div>`,
+              })}
+            >
               <Popup>End Point</Popup>
             </Marker>
           )}
@@ -216,25 +262,59 @@ export default function Dashboard() {
               position={[entry.location.lat, entry.location.lng]}
               icon={L.divIcon({
                 className: 'custom-icon',
-                html: `<div style="background:${getColor(entry.label)};width:20px;height:20px;border-radius:50%"></div>`
+                html: `<div style="background:${getColor(entry.label)};width:20px;height:20px;border-radius:50%"></div>`,
               })}
-              eventHandlers={{ click: () => setModalData(entry) }}
+              eventHandlers={{
+                click: () => setModalData(entry),
+              }}
             />
           ))}
+
         </MapContainer>
+  
+        <div className="App">
+
+      
+
+    </div>
+    {/* Footer */}
+
       </div>
 
+
+      {/* Modal */}
       {modalData && (
         <div className="detection-modal-overlay" onClick={handleModalBackgroundClick}>
           <div className="detection-modal">
-            <h2>Detection Details</h2>
-            <p><strong>Label:</strong> {modalData.label}</p>
-            <p><strong>Coordinates:</strong> {modalData.location.lat}, {modalData.location.lng}</p>
-            <button onClick={() => setModalData(null)}>Close</button>
+            <button className="close-btn" onClick={() => setModalData(null)}>&times;</button>
+            <h2>{modalData.label}</h2>
+            {/* Support multiple images */}
+            {modalData.images && modalData.images.length > 0 ? (
+              modalData.images.map((img, idx) => (
+                <img
+                  key={idx}
+                  src={img}
+                  alt={`${modalData.label} ${idx + 1}`}
+                  className="modal-image"
+                />
+              ))
+            ) : (
+              <img
+                src={modalData.image_url}
+                alt={modalData.label}
+                className="modal-image"
+              />
+            )}
+            <p>
+              <strong>Location: </strong>
+              {modalData.location ? `${modalData.location.lat}, ${modalData.location.lng}` : "Unknown"}
+            </p>
+            <p><strong>Detected At: </strong>{modalData.created_at || "Unknown"}</p>
           </div>
         </div>
       )}
-
     </div>
   );
 }
+
+export default App;
