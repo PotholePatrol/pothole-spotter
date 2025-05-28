@@ -1,10 +1,10 @@
 import React from 'react';
 
 const BackgroundSection = () => (
-    <section class="background-image">
-        <div class="background-text">
+    <section className="background-image">
+        <div className="background-text">
             <h2>Drive Toward Safer Roads</h2>
-            <p class="background-text">Upload road images and detect potholes with AI-powered analysis.</p>
+            <p className="background-text">Upload road images and detect potholes with AI-powered analysis.</p>
         </div>
     </section>
 
