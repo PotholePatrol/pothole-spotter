@@ -19,9 +19,23 @@ const app = express();
 const PORT = 5000;
 
 // Middleware
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://pothole-spotter-git-main-stevens-projects-8a9fb357.vercel.app',
+  'https://pothole-spotter.vercel.app', // future production domain if needed
+];
+
 app.use(cors({
-  origin: 'https://pothole-spotter-git-main-stevens-projects-8a9fb357.vercel.app',
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`🚫 CORS blocked request from: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
 }));
+
 app.use(express.json());
 
 // Serve uploads folder statically so frontend can access images
