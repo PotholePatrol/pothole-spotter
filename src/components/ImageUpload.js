@@ -51,7 +51,7 @@ const ImageUpload = ({ onImagesSelect }) => {
       }
     };
 
-    xhr.open('POST', 'http://localhost:5000/analyze'); // Update this URL if needed
+    xhr.open('POST', 'https://https://pothole-spotter.onrender.com/analyze');
     xhr.send(formData);
   });
 };
