@@ -19,7 +19,9 @@ const app = express();
 const PORT = 5000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: 'https://pothole-spotter-git-main-stevens-projects-8a9fb357.vercel.app',
+}));
 app.use(express.json());
 
 // Serve uploads folder statically so frontend can access images
