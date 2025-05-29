@@ -2,7 +2,7 @@
 node_modules/
 
 # Environment config - keep secrets outta GitHub
-.env
+backend/.env
 
 # Uploads folder (optional, if you don’t want local images pushed)
 uploads/
