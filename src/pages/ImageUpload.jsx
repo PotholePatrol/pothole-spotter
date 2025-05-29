@@ -111,7 +111,7 @@ const ImageUpload = ({ onImagesSelect }) => {
         }
       };
 
-      xhr.open('POST', 'https://pothole-spotter.onrender.com/analyze');
+      xhr.open('POST', 'https://pothole-spotter.onrender.com/upload');
       xhr.send(formData);
     });
   };

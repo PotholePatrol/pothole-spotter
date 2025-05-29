@@ -346,6 +346,18 @@ L.Icon.Default.mergeOptions({
   shadowUrl,
 });
 
+// Constants
+const API_ENDPOINT = 'http://localhost:5000/analyze';
+
+const roadTypes = [
+  { name: 'Highway', value: 'highway', color: 'bg-red-100 text-red-800' },
+  { name: 'Primary Road', value: 'primary', color: 'bg-orange-100 text-orange-800' },
+  { name: 'Secondary Road', value: 'secondary', color: 'bg-yellow-100 text-yellow-800' },
+  { name: 'Tertiary Road', value: 'tertiary', color: 'bg-green-100 text-green-800' },
+  { name: 'Residential', value: 'residential', color: 'bg-blue-100 text-blue-800' },
+  { name: 'Unpaved', value: 'unpaved', color: 'bg-gray-100 text-gray-800' }
+];
+
 // Custom marker icons
 const startIcon = new L.Icon({
   iconUrl: 'https://cdn-icons-png.flaticon.com/512/2776/2776067.png',
@@ -361,23 +373,29 @@ const endIcon = new L.Icon({
   popupAnchor: [0, -32]
 });
 
-const roadTypes = [
-  { name: 'Highway', value: 'highway', color: 'bg-red-100 text-red-800' },
-  { name: 'Primary Road', value: 'primary', color: 'bg-orange-100 text-orange-800' },
-  { name: 'Secondary Road', value: 'secondary', color: 'bg-yellow-100 text-yellow-800' },
-  { name: 'Tertiary Road', value: 'tertiary', color: 'bg-green-100 text-green-800' },
-  { name: 'Residential', value: 'residential', color: 'bg-blue-100 text-blue-800' },
-  { name: 'Unpaved', value: 'unpaved', color: 'bg-gray-100 text-gray-800' }
-];
+// Helper Functions
+const getColorForLabel = (label) => {
+  const normalized = label?.toLowerCase() || '';
+  if (normalized.includes('major')) return 'red';
+  if (normalized.includes('minor')) return 'orange';
+  return 'green';
+};
 
+const renderStars = (count) => {
+  return (
+    <div className="flex">
+      {[...Array(5)].map((_, i) => (
+        <i 
+          key={i} 
+          className={`pi ${i < count ? 'pi-star-fill text-yellow-500' : 'pi-star text-gray-300'}`}
+        />
+      ))}
+    </div>
+  );
+};
+
+// Components
 const LocationMarker = ({ points, setPoints, selectionMode, allData, setModalData }) => {
-  const getColor = (label) => {
-    const normalized = label?.toLowerCase() || '';
-    if (normalized.includes('major')) return 'red';
-    if (normalized.includes('minor')) return 'orange';
-    return 'green';
-  };
-
   useMapEvents({
     click(e) {
       if (selectionMode === 'single') {
@@ -430,7 +448,7 @@ const LocationMarker = ({ points, setPoints, selectionMode, allData, setModalDat
           position={[entry.location.lat, entry.location.lng]}
           icon={L.divIcon({
             className: 'custom-icon',
-            html: `<div style="background:${getColor(entry.label)};width:20px;height:20px;border-radius:50%"></div>`,
+            html: `<div style="background:${getColorForLabel(entry.label)};width:20px;height:20px;border-radius:50%"></div>`,
           })}
           eventHandlers={{
             click: () => handleMarkerClick(entry),
@@ -441,7 +459,93 @@ const LocationMarker = ({ points, setPoints, selectionMode, allData, setModalDat
   );
 };
 
+const DetectionModal = ({ modalData, setModalData }) => {
+  const handleBackgroundClick = (e) => {
+    if (e.target.classList.contains('detection-modal-overlay')) {
+      setModalData(null);
+    }
+  };
+
+  if (!modalData) return null;
+
+  return (
+    <div className="detection-modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" 
+         onClick={handleBackgroundClick}>
+      <div className="detection-modal bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-auto">
+        <button className="close-btn absolute top-4 right-4 text-2xl" 
+                onClick={() => setModalData(null)}>&times;</button>
+        <h2 className="text-xl font-bold mb-4">{modalData.label}</h2>
+        {modalData.image_url && (
+          <img
+            src={modalData.image_url}
+            alt={modalData.label}
+            className="modal-image w-full h-auto mb-4 rounded"
+          />
+        )}
+        <p className="mb-2">
+          <strong className="font-medium">Location: </strong>
+          {modalData.location ? `${modalData.location.lat.toFixed(6)}, ${modalData.location.lng.toFixed(6)}` : "Unknown"}
+        </p>
+        <p className="mb-2">
+          <strong className="font-medium">Detected At: </strong>
+          {modalData.created_at || "Unknown"}
+        </p>
+        {modalData.confidence && (
+          <p className="mb-2">
+            <strong className="font-medium">Confidence: </strong>
+            {Math.round(modalData.confidence * 100)}%
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const FileUploadTemplate = {
+  item: (file, props) => (
+    <div className="flex items-center p-3 border border-gray-200 rounded-lg mb-2 bg-white hover:bg-gray-50 transition-colors">
+      <div className="relative flex-shrink-0">
+        <img 
+          alt={file.name} 
+          src={file.objectURL} 
+          className="w-16 h-16 object-cover rounded"
+        />
+        <span className="absolute bottom-1 right-1 bg-black bg-opacity-70 text-white text-xs px-1 rounded">
+          {props.formatSize}
+        </span>
+      </div>
+      <div className="ml-3 flex-1 min-w-0">
+        <p className="font-medium truncate">{file.name}</p>
+        <p className="text-xs text-gray-500">{file.type.split('/')[1]?.toUpperCase()}</p>
+        <div className="flex items-center mt-1">
+          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+            {Math.floor(Math.random() * 1000)}m resolution
+          </span>
+        </div>
+      </div>
+      <Button
+        type="button"
+        icon="pi pi-times"
+        className="p-button-text p-button-rounded p-button-danger"
+        onClick={() => props.onTemplateRemove(file, props.onRemove)}
+        tooltip="Remove"
+        tooltipOptions={{ position: 'left' }}
+      />
+    </div>
+  ),
+  empty: () => (
+    <div className="flex flex-col items-center justify-center py-8 text-center">
+      <i className="pi pi-cloud-upload text-4xl text-blue-500 mb-3"></i>
+      <p className="font-medium text-gray-700">Drag & drop road images here</p>
+      <p className="text-sm text-gray-500 mt-1">or click to browse files</p>
+      <p className="text-xs text-gray-400 mt-3">Supports JPG, PNG up to 5MB</p>
+    </div>
+  )
+};
+
+// Main Component
 const RoadAnalyzerDashboard = () => {
+  // State
   const [images, setImages] = useState([]);
   const [points, setPoints] = useState([]);
   const [selectionMode, setSelectionMode] = useState('single');
@@ -454,10 +558,13 @@ const RoadAnalyzerDashboard = () => {
   const [allData, setAllData] = useState([]);
   const [predictions, setPredictions] = useState([]);
   const [modalData, setModalData] = useState(null);
+  
+  // Refs
   const toast = useRef(null);
   const fileUploadRef = useRef(null);
   const mapRef = useRef(null);
 
+  // Effects
   useEffect(() => {
     const handleResize = () => {
       setMapHeight(window.innerWidth < 768 ? '300px' : '400px');
@@ -467,7 +574,6 @@ const RoadAnalyzerDashboard = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Close modal on Escape key
   useEffect(() => {
     function handleEscape(e) {
       if (e.key === "Escape") setModalData(null);
@@ -484,221 +590,150 @@ const RoadAnalyzerDashboard = () => {
     };
   }, [modalData]);
 
+  // Event Handlers
   const onUpload = (e) => {
     const newImages = [...images, ...e.files];
     setImages(newImages);
-    toast.current.show({
-      severity: 'success',
-      summary: 'Upload Successful',
-      detail: `${e.files.length} images added (${newImages.length} total)`,
-      life: 3000,
-    });
+    showToast('success', 'Upload Successful', `${e.files.length} images added (${newImages.length} total)`);
   };
 
   const onTemplateRemove = (file, callback) => {
     callback();
     const newImages = images.filter(f => f.name !== file.name);
     setImages(newImages);
-    toast.current.show({
-      severity: 'warn',
-      summary: 'Removed',
-      detail: `${file.name} was removed (${newImages.length} remaining)`,
-      life: 2000,
-    });
+    showToast('warn', 'Removed', `${file.name} was removed (${newImages.length} remaining)`);
   };
 
   const handleAnalyze = async () => {
-    if (images.length === 0) {
-      toast.current.show({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Please upload at least one image',
-        life: 3000,
-      });
-      return;
-    }
-
-    if (points.length === 0) {
-      toast.current.show({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Please select at least one point on the map',
-        life: 3000,
-      });
-      return;
-    }
-
-    if (selectionMode === 'both' && points.length < 2) {
-      toast.current.show({
-        severity: 'error',
-        summary: 'Error',
-        detail: 'Please select both start and end points',
-        life: 3000,
-      });
-      return;
-    }
+    if (!validateAnalysisInputs()) return;
 
     setIsAnalyzing(true);
     setProgress(0);
     setAnalysisResult(null);
     
+    try {
+      const results = await analyzeImages();
+      if (results.length > 0) {
+        processAnalysisResults(results);
+      }
+    } catch (error) {
+      console.error('Analysis failed:', error);
+      showToast('error', 'Analysis Error', 'Failed to complete analysis');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const validateAnalysisInputs = () => {
+    if (images.length === 0) {
+      showToast('error', 'Error', 'Please upload at least one image');
+      return false;
+    }
+
+    if (points.length === 0) {
+      showToast('error', 'Error', 'Please select at least one point on the map');
+      return false;
+    }
+
+    if (selectionMode === 'both' && points.length < 2) {
+      showToast('error', 'Error', 'Please select both start and end points');
+      return false;
+    }
+
+    return true;
+  };
+
+  const analyzeImages = async () => {
     const coords = selectionMode === 'single' ? points[0] : points[0];
     const results = [];
 
-    for (let file of images) {
-      const formData = new FormData();
-      formData.append('image', file);
-      formData.append('lat', coords.lat);
-      formData.append('lng', coords.lng);
-
+    for (let i = 0; i < images.length; i++) {
+      const file = images[i];
       try {
-        const res = await fetch('http://localhost:5000/analyze', {
-          method: 'POST',
-          body: formData,
-        });
-
-        let data;
-        try {
-          data = await res.json();
-        } catch (jsonErr) {
-          const rawText = await res.text();
-          console.error("Failed to parse JSON:", jsonErr);
-          console.error("Raw response text:", rawText);
-          toast.current.show({
-            severity: 'error',
-            summary: 'Analysis Error',
-            detail: 'Server sent an invalid response',
-            life: 3000,
-          });
-          continue;
+        const data = await analyzeSingleImage(file, coords);
+        if (data) {
+          results.push(data);
+          setProgress(((i + 1) / images.length) * 100);
         }
-
-        if (!res.ok) {
-          console.error('Backend error:', data.error);
-          toast.current.show({
-            severity: 'error',
-            summary: 'Analysis Error',
-            detail: data.error || 'Analysis failed',
-            life: 3000,
-          });
-          continue;
-        }
-
-        results.push(data);
-        setProgress((i + 1) / images.length * 100);
-      } catch (err) {
-        console.error('Upload failed:', err);
-        toast.current.show({
-          severity: 'error',
-          summary: 'Upload Failed',
-          detail: 'Check your server or internet connection',
-          life: 3000,
-        });
+      } catch (error) {
+        console.error(`Error analyzing image ${file.name}:`, error);
       }
     }
 
-    if (results.length > 0) {
-      const randomRoadType = roadTypes[Math.floor(Math.random() * roadTypes.length)];
-      const result = {
-        ...results[0],
-        roadType: randomRoadType,
-        quality: Math.floor(Math.random() * 5) + 1,
-        length: (Math.random() * 10 + 1).toFixed(2),
-        condition: Math.random() > 0.5 ? 'Good' : 'Needs Maintenance',
-        features: [
-          Math.random() > 0.5 ? 'Markings Visible' : 'Faded Markings',
-          Math.random() > 0.5 ? 'No Potholes' : 'Some Potholes',
-          Math.random() > 0.5 ? 'Clear Shoulders' : 'Narrow Shoulders'
-        ].filter((_, i) => i < 2 || Math.random() > 0.5),
-        imagesAnalyzed: images.length,
-        coordinates: points
-      };
-      
-      setAnalysisResult(result);
-      setAllData(prev => [...prev, ...results]);
-      setPredictions(prev => [...prev, ...results.map(r => r.label)]);
-      showAnalysisComplete(result);
+    return results;
+  };
+
+  const analyzeSingleImage = async (file, coords) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('lat', coords.lat);
+    formData.append('lng', coords.lng);
+
+    try {
+      const res = await fetch(API_ENDPOINT, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Analysis failed');
+      }
+
+      return await res.json();
+    } catch (error) {
+      console.error('API Error:', error);
+      showToast('error', 'Analysis Error', error.message || 'Failed to analyze image');
+      return null;
     }
+  };
+
+  const processAnalysisResults = (results) => {
+    const randomRoadType = roadTypes[Math.floor(Math.random() * roadTypes.length)];
+    const result = {
+      ...results[0],
+      roadType: randomRoadType,
+      quality: Math.floor(Math.random() * 5) + 1,
+      length: (Math.random() * 10 + 1).toFixed(2),
+      condition: Math.random() > 0.5 ? 'Good' : 'Needs Maintenance',
+      features: [
+        Math.random() > 0.5 ? 'Markings Visible' : 'Faded Markings',
+        Math.random() > 0.5 ? 'No Potholes' : 'Some Potholes',
+        Math.random() > 0.5 ? 'Clear Shoulders' : 'Narrow Shoulders'
+      ].filter((_, i) => i < 2 || Math.random() > 0.5),
+      imagesAnalyzed: images.length,
+      coordinates: points
+    };
     
-    setIsAnalyzing(false);
+    setAnalysisResult(result);
+    setAllData(prev => [...prev, ...results]);
+    setPredictions(prev => [...prev, ...results.map(r => r.label)]);
+    showAnalysisComplete(result);
+  };
+
+  // UI Helpers
+  const showToast = (severity, summary, detail) => {
+    toast.current.show({ severity, summary, detail, life: 3000 });
   };
 
   const showAnalysisComplete = (result) => {
-    toast.current.show({
-      severity: 'success',
-      summary: 'Analysis Complete!',
-      detail: (
-        <div className="space-y-1">
-          <p>{result.imagesAnalyzed} images analyzed</p>
-          <p>Road Type: {result.roadType.name}</p>
-          <p>Condition: {result.condition}</p>
-        </div>
-      ),
-      life: 5000,
-    });
-  };
-
-  const renderStars = (count) => {
-    return (
-      <div className="flex">
-        {[...Array(5)].map((_, i) => (
-          <i 
-            key={i} 
-            className={`pi ${i < count ? 'pi-star-fill text-yellow-500' : 'pi-star text-gray-300'}`}
-          />
-        ))}
+    showToast('success', 'Analysis Complete!', 
+      <div className="space-y-1">
+        <p>{result.imagesAnalyzed} images analyzed</p>
+        <p>Road Type: {result.roadType.name}</p>
+        <p>Condition: {result.condition}</p>
       </div>
     );
   };
 
-  const itemTemplate = (file, props) => {
-    return (
-      <div className="flex items-center p-3 border border-gray-200 rounded-lg mb-2 bg-white hover:bg-gray-50 transition-colors">
-        <div className="relative flex-shrink-0">
-          <img 
-            alt={file.name} 
-            src={file.objectURL} 
-            className="w-16 h-16 object-cover rounded"
-          />
-          <span className="absolute bottom-1 right-1 bg-black bg-opacity-70 text-white text-xs px-1 rounded">
-            {props.formatSize}
-          </span>
-        </div>
-        <div className="ml-3 flex-1 min-w-0">
-          <p className="font-medium truncate">{file.name}</p>
-          <p className="text-xs text-gray-500">{file.type.split('/')[1]?.toUpperCase()}</p>
-          <div className="flex items-center mt-1">
-            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
-              {Math.floor(Math.random() * 1000)}m resolution
-            </span>
-          </div>
-        </div>
-        <Button
-          type="button"
-          icon="pi pi-times"
-          className="p-button-text p-button-rounded p-button-danger"
-          onClick={() => onTemplateRemove(file, props.onRemove)}
-          tooltip="Remove"
-          tooltipOptions={{ position: 'left' }}
-        />
-      </div>
-    );
-  };
-
-  const emptyTemplate = () => {
-    return (
-      <div className="flex flex-col items-center justify-center py-8 text-center">
-        <i className="pi pi-cloud-upload text-4xl text-blue-500 mb-3"></i>
-        <p className="font-medium text-gray-700">Drag & drop road images here</p>
-        <p className="text-sm text-gray-500 mt-1">or click to browse files</p>
-        <p className="text-xs text-gray-400 mt-3">Supports JPG, PNG up to 5MB</p>
-      </div>
-    );
-  };
-
-  const handleModalBackgroundClick = (e) => {
-    if (e.target.classList.contains('detection-modal-overlay')) {
-      setModalData(null);
+  const clearAllData = () => {
+    setImages([]);
+    setPoints([]);
+    setAnalysisResult(null);
+    setAllData([]);
+    setPredictions([]);
+    if (fileUploadRef.current) {
+      fileUploadRef.current.clear();
     }
   };
 
@@ -706,38 +741,7 @@ const RoadAnalyzerDashboard = () => {
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <Toast ref={toast} position="top-right" />
       
-      {/* Modal */}
-      {modalData && (
-        <div className="detection-modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" 
-             onClick={handleModalBackgroundClick}>
-          <div className="detection-modal bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-auto">
-            <button className="close-btn absolute top-4 right-4 text-2xl" 
-                    onClick={() => setModalData(null)}>&times;</button>
-            <h2 className="text-xl font-bold mb-4">{modalData.label}</h2>
-            {modalData.image_url && (
-              <img
-                src={modalData.image_url}
-                alt={modalData.label}
-                className="modal-image w-full h-auto mb-4 rounded"
-              />
-            )}
-            <p className="mb-2">
-              <strong className="font-medium">Location: </strong>
-              {modalData.location ? `${modalData.location.lat.toFixed(6)}, ${modalData.location.lng.toFixed(6)}` : "Unknown"}
-            </p>
-            <p className="mb-2">
-              <strong className="font-medium">Detected At: </strong>
-              {modalData.created_at || "Unknown"}
-            </p>
-            {modalData.confidence && (
-              <p className="mb-2">
-                <strong className="font-medium">Confidence: </strong>
-                {Math.round(modalData.confidence * 100)}%
-              </p>
-            )}
-          </div>
-        </div>
-      )}
+      <DetectionModal modalData={modalData} setModalData={setModalData} />
 
       <div className="max-w-7xl mx-auto">
         {/* Header */}
@@ -795,23 +799,17 @@ const RoadAnalyzerDashboard = () => {
                 
                 <FileUpload
                   ref={fileUploadRef}
-                  name="images"
-                  url="/analyze"
+                  name="image"
+                  // url="/api/upload"
+                  url="http://localhost:5000/upload"
                   multiple
                   accept="image/*"
                   maxFileSize={5000000}
                   onUpload={onUpload}
                   onSelect={() => {}}
-                  onError={() => {
-                    toast.current.show({
-                      severity: 'error',
-                      summary: 'Upload Error',
-                      detail: 'Failed to upload files',
-                      life: 3000,
-                    });
-                  }}
-                  emptyTemplate={emptyTemplate}
-                  itemTemplate={itemTemplate}
+                  onError={() => showToast('error', 'Upload Error', 'Failed to upload files')}
+                  emptyTemplate={FileUploadTemplate.empty}
+                  itemTemplate={FileUploadTemplate.item}
                   chooseOptions={{
                     icon: 'pi pi-images',
                     iconOnly: false,
@@ -851,7 +849,7 @@ const RoadAnalyzerDashboard = () => {
                       onChange={(e) => {
                         setSelectionMode(e.value ? 'both' : 'single');
                         if (!e.value) {
-                          setPoints(points.slice(0, 1)); // Keep only first point when switching to single
+                          setPoints(points.slice(0, 1));
                         }
                       }} 
                       className="w-32"
@@ -940,12 +938,7 @@ const RoadAnalyzerDashboard = () => {
                       onClick={() => {
                         const coords = points.map(p => `${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}`).join(' to ');
                         navigator.clipboard.writeText(coords);
-                        toast.current.show({
-                          severity: 'info',
-                          summary: 'Copied!',
-                          detail: 'Coordinates copied to clipboard',
-                          life: 2000,
-                        });
+                        showToast('info', 'Copied!', 'Coordinates copied to clipboard');
                       }}
                     />
                   </div>
@@ -1103,16 +1096,7 @@ const RoadAnalyzerDashboard = () => {
                 label="Clear All" 
                 icon="pi pi-trash" 
                 className="p-button-outlined p-button-danger"
-                onClick={() => {
-                  setImages([]);
-                  setPoints([]);
-                  setAnalysisResult(null);
-                  setAllData([]);
-                  setPredictions([]);
-                  if (fileUploadRef.current) {
-                    fileUploadRef.current.clear();
-                  }
-                }}
+                onClick={clearAllData}
                 disabled={(images.length === 0 && points.length === 0 && allData.length === 0) || isAnalyzing}
               />
               <Button 
