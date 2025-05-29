@@ -88,6 +88,13 @@ npm install
 npm start
 ```
 
+# Setting up Environment
+
+1. Duplicate `.env.example` and rename it to `.env`
+2. Fill in your actual keys and DB credentials
+3. Do NOT commit the real `.env` file
+
+
 ### Env Config (.env example):
 ```env
 AZURE_ENDPOINT=https://<your-endpoint>.cognitiveservices.azure.com/
