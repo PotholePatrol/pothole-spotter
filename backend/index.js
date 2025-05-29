@@ -49,7 +49,15 @@ async function initDb() {
     db = await mysql.createPool({
       host: 'localhost',
       user: 'root',
+<<<<<<< Updated upstream
       password: 'wmL0/m3wXDc/UcIn',
+=======
+<<<<<<< HEAD
+      password: '75223031',
+=======
+      password: 'wmL0/m3wXDc/UcIn',
+>>>>>>> 90b212fd3d75da3211eeb9e4107f5af18eb11799
+>>>>>>> Stashed changes
       database: 'smartroads',
       waitForConnections: true,
       connectionLimit: 10,
@@ -79,7 +87,11 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+=======
+<<<<<<< HEAD
+>>>>>>> Stashed changes
 app.post('/upload', upload.single('image'), async (req, res) => {
   const imageFile = req.file;
   const { lat, lng } = req.body;
@@ -99,6 +111,11 @@ app.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
 });
 
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
+=======
+>>>>>>> 90b212fd3d75da3211eeb9e4107f5af18eb11799
 >>>>>>> Stashed changes
 // POST /analyze
 app.post('/analyze', upload.single('image'), async (req, res) => {
@@ -150,6 +167,7 @@ app.post('/analyze', upload.single('image'), async (req, res) => {
     const confidence = topPrediction.probability;
     const imagePath = imageFile.path;
 
+<<<<<<< Updated upstream
     // Generate a new session_id for this analyze request
     const sessionId = uuidv4();
 
@@ -157,6 +175,22 @@ app.post('/analyze', upload.single('image'), async (req, res) => {
       `INSERT INTO detections 
        (label, image_url, lat, lng, stretch_start_lat, stretch_start_lng, stretch_end_lat, stretch_end_lng, session_id) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+=======
+<<<<<<< HEAD
+    await db.query(
+      `INSERT INTO detections
+       (label, image_url, lat, lng, stretch_start_lat, stretch_start_lng, stretch_end_lat, stretch_end_lng)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+=======
+    // Generate a new session_id for this analyze request
+    const sessionId = uuidv4();
+
+    await db.query(
+      `INSERT INTO detections 
+       (label, image_url, lat, lng, stretch_start_lat, stretch_start_lng, stretch_end_lat, stretch_end_lng, session_id) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+>>>>>>> 90b212fd3d75da3211eeb9e4107f5af18eb11799
+>>>>>>> Stashed changes
       [
         label,
         imagePath,
@@ -170,10 +204,23 @@ app.post('/analyze', upload.single('image'), async (req, res) => {
       ]
     );
 
+<<<<<<< Updated upstream
     console.log('✅ Detection saved to DB with session_id:', sessionId);
     const imageUrl = `http://localhost:${PORT}/uploads/${path.basename(imagePath)}`;
 
     // Return session_id in response
+=======
+<<<<<<< HEAD
+    console.log('✅ Detection saved to DB');
+    const imageUrl = `http://localhost:${PORT}/uploads/${path.basename(imagePath)}`;
+
+=======
+    console.log('✅ Detection saved to DB with session_id:', sessionId);
+    const imageUrl = `http://localhost:${PORT}/uploads/${path.basename(imagePath)}`;
+
+    // Return session_id in response
+>>>>>>> 90b212fd3d75da3211eeb9e4107f5af18eb11799
+>>>>>>> Stashed changes
     res.json({
       label,
       confidence,
@@ -203,6 +250,7 @@ app.get('/detections/session/:sessionId', async (req, res) => {
       'SELECT * FROM detections WHERE session_id = ? ORDER BY created_at DESC',
       [sessionId]
     );
+<<<<<<< Updated upstream
 
     if (rows.length === 0) {
       return res.status(404).json({ error: 'No detections found for this session' });
@@ -215,7 +263,24 @@ app.get('/detections/session/:sessionId', async (req, res) => {
   }
 });
 
+=======
+>>>>>>> Stashed changes
 
+<<<<<<< HEAD
+=======
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'No detections found for this session' });
+    }
+
+    res.json(rows);
+  } catch (err) {
+    console.error('🔥 Error fetching detections by session:', err.message);
+    res.status(500).json({ error: 'Server error fetching session detections' });
+  }
+});
+
+
+>>>>>>> 90b212fd3d75da3211eeb9e4107f5af18eb11799
 // GET /detections/:id
 app.get('/detections/:id', async (req, res) => {
   try {
