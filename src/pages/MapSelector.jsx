@@ -1,20 +1,19 @@
-// src/components/MapSelector.js
+// src/components/MapSelector.jsx
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 
 // Leaflet icon fix
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
 const PointsSelector = ({ points, setPoints }) => {
   useMapEvents({
-    click(e) {
+    click(e) => {
       if (points.length === 2) {
         setPoints([e.latlng]);
       } else {
@@ -41,6 +40,30 @@ const MapSelector = ({ onPointsChange, detections }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const resetSelection = () => {
+    setPoints([]);
+    setSelectedDetection(null);
+    setSelectedId(null);
+  };
+
+  const fetchDetectionDetails = async (id) => {
+    setSelectedId(id);
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`http://localhost:3000/api/detections/${id}`);
+      if (!res.ok) throw new Error('Failed to fetch detection');
+      const data = await res.json();
+      setSelectedDetection(data);
+    } catch (err) {
+      setError(err.message);
+      setSelectedDetection(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (selectionMode === 'points') {
       onPointsChange(points);
@@ -49,34 +72,11 @@ const MapSelector = ({ onPointsChange, detections }) => {
     }
   }, [points, selectionMode, onPointsChange]);
 
-  useEffect(() => {
-    if (!selectedId) return;
-
-    setLoading(true);
-    setError(null);
-
-    fetch(`http://localhost:3000/api/detections/${selectedId}`)
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to fetch detection');
-        return res.json();
-      })
-      .then(data => {
-        setSelectedDetection(data);
-      })
-      .catch(err => {
-        setError(err.message);
-        setSelectedDetection(null);
-      })
-      .finally(() => setLoading(false));
-  }, [selectedId]);
-
   return (
     <div className="p-4 bg-white rounded-lg shadow-md">
-      {/* Selection Mode Toggle */}
+      {/* Selection Toggle */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-800 mb-3">
-          Select Road Area:
-        </label>
+        <label className="block text-sm font-medium text-gray-800 mb-3">Select Road Area:</label>
         <div className="flex gap-6">
           <label className="inline-flex items-center text-sm text-gray-700">
             <input
@@ -85,9 +85,7 @@ const MapSelector = ({ onPointsChange, detections }) => {
               checked={selectionMode === 'points'}
               onChange={() => {
                 setSelectionMode('points');
-                setPoints([]);
-                setSelectedDetection(null);
-                setSelectedId(null);
+                resetSelection();
               }}
               className="text-black focus:ring-2 focus:ring-yellow-500"
             />
@@ -100,9 +98,7 @@ const MapSelector = ({ onPointsChange, detections }) => {
               checked={selectionMode === 'area'}
               onChange={() => {
                 setSelectionMode('area');
-                setPoints([]);
-                setSelectedDetection(null);
-                setSelectedId(null);
+                resetSelection();
               }}
               className="text-black mr-2"
               disabled
@@ -125,14 +121,13 @@ const MapSelector = ({ onPointsChange, detections }) => {
           {selectionMode === 'points' && (
             <>
               <PointsSelector points={points} setPoints={setPoints} />
-
               {detections &&
                 detections.map((det) => (
                   <Marker
                     key={det.id}
                     position={[det.lat, det.lng]}
                     eventHandlers={{
-                      click: () => setSelectedId(det.id),
+                      click: () => fetchDetectionDetails(det.id),
                     }}
                   />
                 ))}
@@ -141,7 +136,7 @@ const MapSelector = ({ onPointsChange, detections }) => {
         </MapContainer>
       </div>
 
-      {/* Selected points info */}
+      {/* Points Info */}
       {selectionMode === 'points' && points.length > 0 && (
         <div className="mt-4 text-sm text-gray-600 bg-gray-50 p-3 rounded-md">
           <p>
@@ -154,17 +149,13 @@ const MapSelector = ({ onPointsChange, detections }) => {
         </div>
       )}
 
-      {/* Modal for selected detection */}
+      {/* Detection Modal */}
       {selectedId && (
         <div className="fixed top-12 right-10 bg-white border border-gray-300 rounded-xl shadow-lg p-6 w-80 z-50">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold text-gray-800">Detection Details</h3>
             <button
-              onClick={() => {
-                setSelectedId(null);
-                setSelectedDetection(null);
-                setError(null);
-              }}
+              onClick={resetSelection}
               className="text-gray-500 hover:text-red-600 font-bold text-lg"
             >
               ✖

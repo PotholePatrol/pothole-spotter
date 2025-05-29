@@ -1,21 +1,26 @@
-// App.js
+// App.jsx
 import React, { useState, useEffect } from 'react';
-import ImageUpload from './components/ImageUpload';
+import ImageUpload from "./ImageUpload";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import AnalysisSummary from './components/AnalysisSummary';
-import './App.css';
-import Footer from './components/footer';
-import BackgroundSection  from './components/BackgroundSection';
+import AnalysisSummary from './AnalysisSummary';
+import '../App.css';
+import Footer from '../components/Footer';
+import BackgroundSection  from './BackgroundSection';
+import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
+import iconUrl from 'leaflet/dist/images/marker-icon.png';
+import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
+
 
 // Fix leaflet icon loading for webpack
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
-  iconUrl: require('leaflet/dist/images/marker-icon.png'),
-  shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
+  iconRetinaUrl,
+  iconUrl,
+  shadowUrl,
 });
+
 
 function LocationSelector({ onSelect }) {
   useMapEvents({
@@ -275,8 +280,7 @@ function App() {
     {/* Footer */}
 
       </div>
-      <Footer />
-          
+
 
       {/* Modal */}
       {modalData && (
