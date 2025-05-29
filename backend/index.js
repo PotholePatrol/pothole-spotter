@@ -78,6 +78,28 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
+<<<<<<< Updated upstream
+=======
+app.post('/upload', upload.single('image'), async (req, res) => {
+  const imageFile = req.file;
+  const { lat, lng } = req.body;
+
+  console.log(req.files);
+  res.send('Files uploaded');
+  if (!imageFile ) {
+    return res.status(400).json({ error: 'Invalid file or coordinates' });
+  }
+
+  console.log('✅ Received image:', imageFile.path);
+  return res.json({ message: 'Upload successful', filename: imageFile.filename });
+});
+
+
+app.listen(PORT, () => {
+  console.log(`✅ Server running at http://localhost:${PORT}`);
+});
+
+>>>>>>> Stashed changes
 // POST /analyze
 app.post('/analyze', upload.single('image'), async (req, res) => {
   try {
