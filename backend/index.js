@@ -7,6 +7,8 @@ const path = require('path');
 const fs = require('fs');
 const axios = require('axios');
 const mysql = require('mysql2/promise');
+const { v4: uuidv4 } = require('uuid');
+
 
 console.log("🔥🔥🔥 Backend restarted and running latest code");
 
@@ -18,12 +20,12 @@ console.log('📸 ITERATION_NAME:', process.env.ITERATION_NAME);
 const app = express();
 const PORT = 5000;
 
-// Middleware
+// CORS
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'https://pothole-spotter-git-main-stevens-projects-8a9fb357.vercel.app',
-  'https://pothole-spotter.vercel.app', // future production domain if needed
+  'https://pothole-spotter.vercel.app',
 ];
 
 app.use(cors({
@@ -38,31 +40,32 @@ app.use(cors({
 }));
 
 app.use(express.json());
-
-// Serve uploads folder statically so frontend can access images
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// MySQL DB connection (promise style)
+// MySQL connection
 let db;
 async function initDb() {
   try {
     db = await mysql.createPool({
       host: 'localhost',
       user: 'root',
-      password: '',
+      password: 'wmL0/m3wXDc/UcIn',
       database: 'smartroads',
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0,
     });
-    console.log('✅ Connected to MySQL database');
+
+    // ✅ ACTUAL connection check
+    const [rows] = await db.query('SELECT 1');
+    console.log('✅ MySQL connection and query successful');
   } catch (err) {
-    console.error('❌ MySQL connection error:', err.message);
+    console.error('❌ MySQL connection/query error:', err.message);
   }
 }
 initDb();
 
-// File storage config
+// Multer config
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadPath = './uploads';
@@ -73,10 +76,9 @@ const storage = multer.diskStorage({
     cb(null, `pothole-${Date.now()}${path.extname(file.originalname)}`);
   },
 });
-
 const upload = multer({ storage });
 
-// POST route to handle upload + location
+// POST /analyze
 app.post('/analyze', upload.single('image'), async (req, res) => {
   try {
     const imageFile = req.file;
@@ -101,16 +103,14 @@ app.post('/analyze', upload.single('image'), async (req, res) => {
     const endpoint = process.env.ENDPOINT.replace(/\/$/, '');
     const url = `${endpoint}/customvision/v3.0/Prediction/${process.env.PROJECT_ID}/classify/iterations/${process.env.ITERATION_NAME}/image`;
 
-    // Azure request debug
     console.log('➡️ Sending to Azure:', url);
     console.log('➡️ Headers:', {
       'Content-Type': 'application/octet-stream',
       'Prediction-Key': process.env.PREDICTION_KEY,
     });
     console.log('➡️ Image Buffer length:', imageBuffer.length);
-    console.log('Image buffer size:', imageBuffer.length);   
-    if(imageBuffer.length === 0) throw new Error('Image buffer is empty');
 
+    if (imageBuffer.length === 0) throw new Error('Image buffer is empty');
 
     const response = await axios.post(
       url,
@@ -128,13 +128,13 @@ app.post('/analyze', upload.single('image'), async (req, res) => {
     const confidence = topPrediction.probability;
     const imagePath = imageFile.path;
 
-    // Insert into database
-    const sql = `INSERT INTO detections 
-      (label, image_url, lat, lng, stretch_start_lat, stretch_start_lng, stretch_end_lat, stretch_end_lng) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+    // Generate a new session_id for this analyze request
+    const sessionId = uuidv4();
 
     await db.query(
-      sql,
+      `INSERT INTO detections 
+       (label, image_url, lat, lng, stretch_start_lat, stretch_start_lng, stretch_end_lat, stretch_end_lng, session_id) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         label,
         imagePath,
@@ -144,22 +144,20 @@ app.post('/analyze', upload.single('image'), async (req, res) => {
         parseFloat(stretchStartLng) || null,
         parseFloat(stretchEndLat) || null,
         parseFloat(stretchEndLng) || null,
+        sessionId,
       ]
     );
 
-    console.log('✅ Detection saved to DB');
-
-    // Build public image URL for frontend
+    console.log('✅ Detection saved to DB with session_id:', sessionId);
     const imageUrl = `http://localhost:${PORT}/uploads/${path.basename(imagePath)}`;
 
-    // DON’T delete the file immediately — let frontend fetch it
-    // Optionally: delete after some delay or cleanup script later
-
+    // Return session_id in response
     res.json({
       label,
       confidence,
       location: { lat: parsedLat, lng: parsedLng },
       imageUrl,
+      session_id: sessionId,
     });
   } catch (err) {
     console.error('🔥 Error during analysis:', err.message);
@@ -175,8 +173,28 @@ app.post('/analyze', upload.single('image'), async (req, res) => {
     res.status(500).json({ error: 'Server error during analysis' });
   }
 });
+//  GET endpoint to fetch by session_id
+app.get('/detections/session/:sessionId', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const [rows] = await db.query(
+      'SELECT * FROM detections WHERE session_id = ? ORDER BY created_at DESC',
+      [sessionId]
+    );
 
-// Get detection by ID
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'No detections found for this session' });
+    }
+
+    res.json(rows);
+  } catch (err) {
+    console.error('🔥 Error fetching detections by session:', err.message);
+    res.status(500).json({ error: 'Server error fetching session detections' });
+  }
+});
+
+
+// GET /detections/:id
 app.get('/detections/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -193,7 +211,7 @@ app.get('/detections/:id', async (req, res) => {
   }
 });
 
-// Get all detections (fixed to async/await)
+// GET /detections
 app.get('/detections', async (req, res) => {
   try {
     const [results] = await db.query('SELECT * FROM detections ORDER BY created_at DESC');
@@ -204,7 +222,7 @@ app.get('/detections', async (req, res) => {
   }
 });
 
-// Get detection by lat & lng for map marker click
+// GET /api/spot
 app.get('/api/spot', async (req, res) => {
   const { lat, lng } = req.query;
 
@@ -224,13 +242,12 @@ app.get('/api/spot', async (req, res) => {
       return res.status(404).json({ message: 'No data available yet.' });
     }
 
-    res.json(rows);  // send all detections, not just one
+    res.json(rows);
   } catch (err) {
     console.error('🔥 Error fetching spot info:', err.message);
     res.status(500).json({ error: 'Server error fetching spot info' });
   }
 });
-
 
 app.listen(PORT, () => {
   console.log(`🚀 Backend running on http://localhost:${PORT}`);
