@@ -41,6 +41,34 @@ pothole-spotter/
 
 ## 🛠️ Setup & Run
 
+## 🧠 Local Setup Instructions
+
+1. **Clone the repo**
+   ```bash
+   https://github.com/PotholePatrol/pothole-spotter.git
+   From the branch called Vi_brants_fix
+   ```
+
+2. **Create environment file**
+   - Copy `.env.example` to `.env` and fill in your details.
+
+3. **Set up MySQL Database**
+   - Make sure MySQL is running.
+   - Run this command to create the `smartroads` database and `detections` table:
+     ```bash
+     mysql -u root -p < smartroads_schema.sql
+     ```
+
+4. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+5. **Run the server**
+   ```bash
+   npm start
+   
+
 ### Prerequisites:
 - Node.js
 - MySQL

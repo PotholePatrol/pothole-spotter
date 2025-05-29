@@ -1,5 +1,5 @@
 module.exports = {
-  // ... your existing config
+  
   theme: {
     extend: {
       animation: {
@@ -43,4 +43,5 @@ module.exports = {
       },
     },
   },
+  plugins: [],
 }

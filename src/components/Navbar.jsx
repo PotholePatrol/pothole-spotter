@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { FaRoad, FaBars, FaTimes } from 'react-icons/fa';
 import { MdDashboard, MdInfo, MdLogin } from 'react-icons/md';
+
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);

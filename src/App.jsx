@@ -7,7 +7,6 @@ import Navbar from './components/Navbar';
 import LoginPage from './pages/loginPage';
 import Footer from  "./components/footer.jsx";
 
-
 function App() {
   return (
     <PrimeReactProvider value={{ unstyled: false, ripple: true }}>
