@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { FaRoad, FaBars, FaTimes } from 'react-icons/fa';
 import { MdDashboard, MdInfo, MdLogin } from 'react-icons/md';
-
+import potholeLogo from '../assets/pothole-logo.png'; // Adjust the path as necessary
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -24,37 +24,41 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo/Brand */}
-          <Link 
-            to="/" 
+          <Link
+            to="/"
             className="flex items-center space-x-2 group"
             onClick={() => setIsOpen(false)}
           >
-            <FaRoad className="text-amber-500 text-2xl md:text-3xl transition-transform group-hover:rotate-12" />
-            <span className="text-white text-xl md:text-2xl font-bold">
+            <img
+              className="h-20 w-24  object-cover"
+              src={potholeLogo}
+              alt="pothole patrol"
+            />
+            {/* <span className="text-white text-xl md:text-2xl font-bold">
               Pothole<span className="text-amber-400">Spotter</span>
-            </span>
+            </span> */}
           </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-1">
-            <NavLink 
-              to="/" 
+            <NavLink
+              to="/"
               icon={<MdDashboard className="mr-1" />}
               isActive={location.pathname === '/'}
             >
               Dashboard
             </NavLink>
-            
-            <NavLink 
-              to="/about" 
+
+            <NavLink
+              to="/about"
               icon={<MdInfo className="mr-1" />}
               isActive={location.pathname === '/about'}
             >
               About
             </NavLink>
-            
-            <NavLink 
-              to="/login" 
+
+            <NavLink
+              to="/login"
               icon={<MdLogin className="mr-1" />}
               isActive={location.pathname === '/login'}
               isCta={true}
@@ -84,26 +88,26 @@ const Navbar = () => {
       {/* Mobile Menu */}
       <div className={`md:hidden transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-96' : 'max-h-0'}`}>
         <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-gray-800">
-          <MobileNavLink 
-            to="/" 
+          <MobileNavLink
+            to="/"
             icon={<MdDashboard className="mr-2" />}
             isActive={location.pathname === '/'}
             onClick={toggleMenu}
           >
             Dashboard
           </MobileNavLink>
-          
-          <MobileNavLink 
-            to="/about" 
+
+          <MobileNavLink
+            to="/about"
             icon={<MdInfo className="mr-2" />}
             isActive={location.pathname === '/about'}
             onClick={toggleMenu}
           >
             About
           </MobileNavLink>
-          
-          <MobileNavLink 
-            to="/login" 
+
+          <MobileNavLink
+            to="/login"
             icon={<MdLogin className="mr-2" />}
             isActive={location.pathname === '/login'}
             onClick={toggleMenu}
@@ -121,11 +125,10 @@ const Navbar = () => {
 const NavLink = ({ to, children, icon, isActive, isCta = false }) => (
   <Link
     to={to}
-    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-      isActive 
-        ? 'bg-blue-800 text-white' 
+    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${isActive
+        ? 'bg-blue-800 text-white'
         : `text-gray-300 hover:bg-gray-700 hover:text-white ${isCta ? 'hover:bg-amber-600' : ''}`
-    } ${isCta ? 'bg-amber-500 text-white hover:bg-amber-600' : ''}`}
+      } ${isCta ? 'bg-amber-500 text-white hover:bg-amber-600' : ''}`}
   >
     {icon}
     {children}
@@ -137,11 +140,10 @@ const MobileNavLink = ({ to, children, icon, isActive, onClick, isCta = false })
   <Link
     to={to}
     onClick={onClick}
-    className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${
-      isActive 
-        ? 'bg-blue-700 text-white' 
+    className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors duration-200 ${isActive
+        ? 'bg-blue-700 text-white'
         : `text-gray-300 hover:bg-gray-700 hover:text-white ${isCta ? 'hover:bg-amber-600' : ''}`
-    } ${isCta ? 'bg-amber-500 text-white hover:bg-amber-600' : ''}`}
+      } ${isCta ? 'bg-amber-500 text-white hover:bg-amber-600' : ''}`}
   >
     {icon}
     {children}

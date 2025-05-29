@@ -3,7 +3,6 @@ import { FaRoad, FaCarCrash, FaChartLine, FaMapMarkedAlt, FaUsers, FaLightbulb }
 import { IoMdSpeedometer } from 'react-icons/io';
 import teamMembers from '../pages/team'; // You'll create this data file
 
-
 const AboutPage = () => {
   return (
     <div className="bg-gray-50 min-h-screen">

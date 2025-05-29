@@ -25,7 +25,7 @@
     <meta property="twitter:image" content="https://potholespotter.example.com/social-preview.jpg">
     
     <!-- Favicons -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/vite.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -103,15 +103,19 @@
         opacity: 0;
         pointer-events: none;
       }
+      #pothole-logo{
+        width: 350px;
+      }
     </style>
   </head>
   <body>
     <!-- Splash Screen -->
     <div id="splash-screen" class="splash-screen">
-      <svg class="splash-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <!-- <svg class="splash-logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path>
-      </svg>
-      <h1 class="splash-title">Pothole Spotter with</h1> 
+      </svg> -->
+      <img id="pothole-logo" src="./src/assets/pothole-logo.png" alt="">
+      <h1 class="splash-title">Pothole patrol</h1>
       <p class="splash-subtitle">Loading Smart Road Monitoring System</p>
       <div class="progress-bar">
         <div class="progress-bar-fill" id="progress-bar"></div>
