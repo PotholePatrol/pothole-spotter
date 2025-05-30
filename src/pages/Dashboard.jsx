@@ -1,325 +1,4 @@
-// // App.jsx
-// import React, { useState, useEffect } from 'react';
-// import ImageUpload from "./ImageUpload";
-// import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
-// import L from 'leaflet';
-// import 'leaflet/dist/leaflet.css';
-// import AnalysisSummary from './AnalysisSummary';
-// import '../App.css';
-// import Footer from '../components/Footer';
-// import BackgroundSection  from './BackgroundSection';
-// import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
-// import iconUrl from 'leaflet/dist/images/marker-icon.png';
-// import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
-
-
-// // Fix leaflet icon loading for webpack
-// delete L.Icon.Default.prototype._getIconUrl;
-// L.Icon.Default.mergeOptions({
-//   iconRetinaUrl,
-//   iconUrl,
-//   shadowUrl,
-// });
-
-
-// function LocationSelector({ onSelect }) {
-//   useMapEvents({
-//     click(e) {
-//       const { lat, lng } = e.latlng;
-//       onSelect({ lat, lng });
-//     },
-//   });
-//   return null;
-// }
-
-// function RoadStretchSelector({ start, end, setStart, setEnd }) {
-//   useMapEvents({
-//     click(e) {
-//       const { lat, lng } = e.latlng;
-//       if (!start) setStart({ lat, lng });
-//       else if (!end) setEnd({ lat, lng });
-//       else {
-//         setStart({ lat, lng });
-//         setEnd(null);
-//       }
-//     },
-//   });
-//   return null;
-// }
-
-// function App() {
-//   const [imageFiles, setImageFiles] = useState([]);
-//   const [location, setLocation] = useState(null);
-//   const [result, setResult] = useState(null);
-//   const [allData, setAllData] = useState([]);
-//   const [predictions, setPredictions] = useState([]);
-//   const [startPoint, setStartPoint] = useState(null);
-//   const [endPoint, setEndPoint] = useState(null);
-//   const [selectionMode, setSelectionMode] = useState("points");
-//   const [modalData, setModalData] = useState(null);
-
-//   // Close modal on Escape key
-//   useEffect(() => {
-//     function handleEscape(e) {
-//       if (e.key === "Escape") setModalData(null);
-//     }
-//     if (modalData) {
-//       window.addEventListener('keydown', handleEscape);
-//       document.body.style.overflow = 'hidden'; // Prevent scroll on modal open
-//     } else {
-//       document.body.style.overflow = '';
-//     }
-//     return () => {
-//       window.removeEventListener('keydown', handleEscape);
-//       document.body.style.overflow = '';
-//     };
-//   }, [modalData]);
-
-//   const toggleSelectionMode = () => {
-//     if (selectionMode === "points") {
-//       setLocation(null);
-//     } else {
-//       setStartPoint(null);
-//       setEndPoint(null);
-//     }
-//     setSelectionMode(selectionMode === "points" ? "roadStretch" : "points");
-//   };
-
-//   const handleUpload = async () => {
-//     if (selectionMode === "points" && (!imageFiles.length || !location)) {
-//       alert('Please upload images and select location');
-//       return;
-//     }
-//     if (selectionMode === "roadStretch" && (!imageFiles.length || !startPoint || !endPoint)) {
-//       alert('Please upload images and select start and end points');
-//       return;
-//     }
-
-//     const coords = selectionMode === "points" ? location : startPoint;
-
-//     if (!coords || !coords.lat || !coords.lng) {
-//       alert("Coordinates missing. Please reselect location.");
-//       return;
-//     }
-
-//     const results = [];
-
-//     for (let file of imageFiles) {
-//       const formData = new FormData();
-//       formData.append('image', file);
-//       formData.append('lat', coords.lat);
-//       formData.append('lng', coords.lng);
-
-//       console.log("📤 Sending file:", file.name);
-//       console.log("📍 Location:", coords.lat, coords.lng);
-
-//       try {
-//         const res = await fetch('http://localhost:5000/analyze', {
-//           method: 'POST',
-//           body: formData,
-//         });
-
-//         let data;
-//         try {
-//           data = await res.json();
-//           console.log("🔥 Backend response:", data);
-//         } catch (jsonErr) {
-//           const rawText = await res.text();
-//           console.error("❌ Failed to parse JSON:", jsonErr);
-//           console.error("🪵 Raw response text:", rawText);
-//           alert('Server sent an invalid response. Check backend logs.');
-//           continue;
-//         }
-
-//         if (!res.ok) {
-//           console.error('❌ Backend error:', data.error);
-//           alert(`Analysis failed: ${data.error}`);
-//           continue;
-//         }
-
-//         results.push(data);
-//       } catch (err) {
-//         console.error('❌ Upload failed:', err);
-//         alert('Upload failed. Check your server or internet.');
-//       }
-//     }
-
-//     if (results.length > 0) {
-//       setResult(results[0]);
-//       setAllData(prev => [...prev, ...results]);
-//       setPredictions(prev => [...prev, ...results.map(r => r.label)]);
-//     }
-//   };
-
-//   const getColor = (label) => {
-//     const normalized = label.toLowerCase();
-//     if (normalized.includes('major')) return 'red';
-//     if (normalized.includes('minor')) return 'orange';
-//     return 'green';
-//   };
-
-//   // Modal background click closes modal
-//   const handleModalBackgroundClick = (e) => {
-//     if (e.target.classList.contains('detection-modal-overlay')) {
-//       setModalData(null);
-//     }
-//   };
-
-//   return (
-
-//     <div className="app-container">
-    
-//       <h1 className="app-title">🛠️ SmartRoads System</h1>
-//     <BackgroundSection />
-      
-
-//       <ImageUpload onImagesSelect={setImageFiles}/>
-
-//       <p className="map-instruction">
-//         {selectionMode === "points"
-//           ? "Click on the map to select pothole location 📍"
-//           : "Click twice on the map to select Start and End points for road stretch 📍📍"}
-//       </p>
-
-//           {/* Buttons */}
-//       <div className='button-container'>
-//         <button className="toggle-btn" onClick={toggleSelectionMode}>
-//         Switch to {selectionMode === "points" ? "Road Stretch Selection" : "Single Point Selection"}
-//       </button>
-//       <br></br>
-//       <button className="upload-btn" onClick={handleUpload}>
-//         Analyze Images
-//       </button>
-//       </div>
-
-//       {result && (
-//         <div className="result-box">
-//           <h3>Latest Detection</h3>
-//           <p><strong>Label:</strong> {result.label}</p>
-//           {result.location ? (
-//             <p><strong>Location:</strong> {result.location.lat}, {result.location.lng}</p>
-//           ) : (
-//             <p className="error-text">⚠️ Location data missing</p>
-//           )}
-//         </div>
-//       )}
-
-//       <AnalysisSummary predictions={predictions} />
-
-//       <div className="map-wrapper" style={{ height: '500px', width: '100%' }}>
-//         <MapContainer
-//           center={[-1.286389, 36.817223]}
-//           zoom={13}
-//           style={{
-//             height: '100%',
-//             width: '100%'
-//           }}
-//           whenCreated={(map) => {
-//             map.on('click', () => setModalData(null));
-//           }}
-//         >
-//           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-
-//           {selectionMode === "points" ? (
-//             <LocationSelector onSelect={setLocation} />
-//           ) : (
-//             <RoadStretchSelector start={startPoint} end={endPoint} setStart={setStartPoint} setEnd={setEndPoint} />
-//           )}
-
-//           {selectionMode === "points" && location && (
-//             <Marker position={[location.lat, location.lng]}>
-//               <Popup>Selected Location</Popup>
-//             </Marker>
-//           )}
-
-//           {selectionMode === "roadStretch" && startPoint && (
-//             <Marker
-//               position={[startPoint.lat, startPoint.lng]}
-//               icon={L.divIcon({
-//                 className: 'custom-icon',
-//                 html: `<div class="start-marker"></div>`,
-//               })}
-//             >
-//               <Popup>Start Point</Popup>
-//             </Marker>
-//           )}
-
-//           {selectionMode === "roadStretch" && endPoint && (
-//             <Marker
-//               position={[endPoint.lat, endPoint.lng]}
-//               icon={L.divIcon({
-//                 className: 'custom-icon',
-//                 html: `<div class="end-marker"></div>`,
-//               })}
-//             >
-//               <Popup>End Point</Popup>
-//             </Marker>
-//           )}
-
-//           {allData.map((entry, i) => (
-//             <Marker
-//               key={i}
-//               position={[entry.location.lat, entry.location.lng]}
-//               icon={L.divIcon({
-//                 className: 'custom-icon',
-//                 html: `<div style="background:${getColor(entry.label)};width:20px;height:20px;border-radius:50%"></div>`,
-//               })}
-//               eventHandlers={{
-//                 click: () => setModalData(entry),
-//               }}
-//             />
-//           ))}
-
-//         </MapContainer>
-  
-//         <div className="App">
-
-      
-
-//     </div>
-//     {/* Footer */}
-
-//       </div>
-
-
-//       {/* Modal */}
-//       {modalData && (
-//         <div className="detection-modal-overlay" onClick={handleModalBackgroundClick}>
-//           <div className="detection-modal">
-//             <button className="close-btn" onClick={() => setModalData(null)}>&times;</button>
-//             <h2>{modalData.label}</h2>
-//             {/* Support multiple images */}
-//             {modalData.images && modalData.images.length > 0 ? (
-//               modalData.images.map((img, idx) => (
-//                 <img
-//                   key={idx}
-//                   src={img}
-//                   alt={`${modalData.label} ${idx + 1}`}
-//                   className="modal-image"
-//                 />
-//               ))
-//             ) : (
-//               <img
-//                 src={modalData.image_url}
-//                 alt={modalData.label}
-//                 className="modal-image"
-//               />
-//             )}
-//             <p>
-//               <strong>Location: </strong>
-//               {modalData.location ? `${modalData.location.lat}, ${modalData.location.lng}` : "Unknown"}
-//             </p>
-//             <p><strong>Detected At: </strong>{modalData.created_at || "Unknown"}</p>
-//           </div>
-//         </div>
-//       )}
-//     </div>
-//   );
-// }
-
-// export default App;
-
-
+// Dashboard.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import { FileUpload } from 'primereact/fileupload';
 import { Button } from 'primereact/button';
@@ -348,6 +27,7 @@ L.Icon.Default.mergeOptions({
 
 // Constants
 const API_ENDPOINT = 'http://localhost:5000/analyze';
+const NOMINATIM_API = 'https://nominatim.openstreetmap.org/search';
 
 const roadTypes = [
   { name: 'Highway', value: 'highway', color: 'bg-red-100 text-red-800' },
@@ -395,7 +75,7 @@ const renderStars = (count) => {
 };
 
 // Components
-const LocationMarker = ({ points, setPoints, selectionMode, allData, setModalData }) => {
+const LocationMarker = ({ points, setPoints, selectionMode, allData, setModalData, setCoordinatePopup }) => {
   useMapEvents({
     click(e) {
       if (selectionMode === 'single') {
@@ -407,6 +87,11 @@ const LocationMarker = ({ points, setPoints, selectionMode, allData, setModalDat
           setPoints([points[0], e.latlng]);
         }
       }
+      setCoordinatePopup({
+        visible: true,
+        position: e.latlng,
+        content: `Lat: ${e.latlng.lat.toFixed(6)}, Lng: ${e.latlng.lng.toFixed(6)}`
+      });
     },
   });
 
@@ -456,6 +141,27 @@ const LocationMarker = ({ points, setPoints, selectionMode, allData, setModalDat
         />
       ))}
     </>
+  );
+};
+
+const CoordinatePopup = ({ popup, setCoordinatePopup }) => {
+  if (!popup.visible) return null;
+
+  return (
+    <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-[1000] bg-white p-3 rounded-lg shadow-lg border border-gray-200 flex items-center">
+      <div className="mr-3">
+        <i className="pi pi-map-marker text-blue-500"></i>
+      </div>
+      <div>
+        <p className="text-sm font-medium">{popup.content}</p>
+      </div>
+      <button 
+        className="ml-3 text-gray-500 hover:text-gray-700"
+        onClick={() => setCoordinatePopup({...popup, visible: false})}
+      >
+        <i className="pi pi-times"></i>
+      </button>
+    </div>
   );
 };
 
@@ -527,7 +233,10 @@ const FileUploadTemplate = {
         type="button"
         icon="pi pi-times"
         className="p-button-text p-button-rounded p-button-danger"
-        onClick={() => props.onTemplateRemove(file, props.onRemove)}
+        onClick={(e) => {
+          e.stopPropagation();
+          props.onRemove(e);
+        }}
         tooltip="Remove"
         tooltipOptions={{ position: 'left' }}
       />
@@ -558,11 +267,20 @@ const RoadAnalyzerDashboard = () => {
   const [allData, setAllData] = useState([]);
   const [predictions, setPredictions] = useState([]);
   const [modalData, setModalData] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [coordinatePopup, setCoordinatePopup] = useState({
+    visible: false,
+    position: null,
+    content: ''
+  });
   
   // Refs
   const toast = useRef(null);
   const fileUploadRef = useRef(null);
   const mapRef = useRef(null);
+  const searchInputRef = useRef(null);
 
   // Effects
   useEffect(() => {
@@ -576,9 +294,12 @@ const RoadAnalyzerDashboard = () => {
 
   useEffect(() => {
     function handleEscape(e) {
-      if (e.key === "Escape") setModalData(null);
+      if (e.key === "Escape") {
+        setModalData(null);
+        setCoordinatePopup({...coordinatePopup, visible: false});
+      }
     }
-    if (modalData) {
+    if (modalData || coordinatePopup.visible) {
       window.addEventListener('keydown', handleEscape);
       document.body.style.overflow = 'hidden';
     } else {
@@ -588,13 +309,12 @@ const RoadAnalyzerDashboard = () => {
       window.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = '';
     };
-  }, [modalData]);
+  }, [modalData, coordinatePopup.visible]);
 
   // Event Handlers
   const onUpload = (e) => {
-    const newImages = [...images, ...e.files];
-    setImages(newImages);
-    showToast('success', 'Upload Successful', `${e.files.length} images added (${newImages.length} total)`);
+    setImages(e.files);
+    showToast('success', 'Upload Successful', `${e.files.length} images added`);
   };
 
   const onTemplateRemove = (file, callback) => {
@@ -602,6 +322,55 @@ const RoadAnalyzerDashboard = () => {
     const newImages = images.filter(f => f.name !== file.name);
     setImages(newImages);
     showToast('warn', 'Removed', `${file.name} was removed (${newImages.length} remaining)`);
+  };
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      showToast('warn', 'Search Error', 'Please enter a location to search');
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await fetch(`${NOMINATIM_API}?q=${encodeURIComponent(searchQuery)}&format=json&limit=5`);
+      const data = await response.json();
+      setSearchResults(data);
+      
+      if (data.length > 0) {
+        const firstResult = data[0];
+        const newCenter = {
+          lat: parseFloat(firstResult.lat),
+          lng: parseFloat(firstResult.lon)
+        };
+        
+        if (mapRef.current) {
+          mapRef.current.flyTo(newCenter, 14);
+        }
+        
+        showToast('success', 'Location Found', `Showing results for ${firstResult.display_name}`);
+      } else {
+        showToast('info', 'No Results', 'No locations found for your search');
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      showToast('error', 'Search Error', 'Failed to search for location');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSearchResultClick = (result) => {
+    const newCenter = {
+      lat: parseFloat(result.lat),
+      lng: parseFloat(result.lon)
+    };
+    
+    if (mapRef.current) {
+      mapRef.current.flyTo(newCenter, 16);
+    }
+    
+    setSearchQuery(result.display_name);
+    setSearchResults([]);
   };
 
   const handleAnalyze = async () => {
@@ -732,9 +501,12 @@ const RoadAnalyzerDashboard = () => {
     setAnalysisResult(null);
     setAllData([]);
     setPredictions([]);
+    setSearchQuery('');
+    setSearchResults([]);
     if (fileUploadRef.current) {
       fileUploadRef.current.clear();
     }
+    showToast('info', 'Cleared', 'All data has been reset');
   };
 
   return (
@@ -742,6 +514,7 @@ const RoadAnalyzerDashboard = () => {
       <Toast ref={toast} position="top-right" />
       
       <DetectionModal modalData={modalData} setModalData={setModalData} />
+      <CoordinatePopup popup={coordinatePopup} setCoordinatePopup={setCoordinatePopup} />
 
       <div className="max-w-7xl mx-auto">
         {/* Header */}
@@ -800,13 +573,12 @@ const RoadAnalyzerDashboard = () => {
                 <FileUpload
                   ref={fileUploadRef}
                   name="image"
-                  // url="/api/upload"
                   url="http://localhost:5000/upload"
                   multiple
                   accept="image/*"
                   maxFileSize={5000000}
                   onUpload={onUpload}
-                  onSelect={() => {}}
+                  onRemove={onTemplateRemove}
                   onError={() => showToast('error', 'Upload Error', 'Failed to upload files')}
                   emptyTemplate={FileUploadTemplate.empty}
                   itemTemplate={FileUploadTemplate.item}
@@ -857,7 +629,42 @@ const RoadAnalyzerDashboard = () => {
                   </div>
                 </div>
                 
-                <div className="relative" style={{ height: mapHeight }}>
+                {/* Search Bar */}
+                <div className="relative mb-4">
+                  <InputText
+                    ref={searchInputRef}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search for a location..."
+                    className="w-full pl-10"
+                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  />
+                  <i className="pi pi-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                  <Button
+                    icon="pi pi-search"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 p-button-text"
+                    onClick={handleSearch}
+                    loading={isSearching}
+                  />
+                  
+                  {/* Search Results Dropdown */}
+                  {searchResults.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-auto">
+                      {searchResults.map((result, i) => (
+                        <div
+                          key={i}
+                          className="p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                          onClick={() => handleSearchResultClick(result)}
+                        >
+                          <p className="font-medium">{result.display_name}</p>
+                          <p className="text-xs text-gray-500">{result.type}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                
+                <div className="relative z-0" style={{ height: mapHeight }}>
                   <MapContainer
                     center={[51.505, -0.09]}
                     zoom={13}
@@ -874,6 +681,7 @@ const RoadAnalyzerDashboard = () => {
                       selectionMode={selectionMode}
                       allData={allData}
                       setModalData={setModalData}
+                      setCoordinatePopup={setCoordinatePopup}
                     />
                   </MapContainer>
                   
@@ -1029,6 +837,12 @@ const RoadAnalyzerDashboard = () => {
                           label="View on Map" 
                           icon="pi pi-map" 
                           className="p-button-outlined w-full"
+                          onClick={() => {
+                            setActiveTab(0);
+                            if (points.length > 0 && mapRef.current) {
+                              mapRef.current.flyTo(points[0], 15);
+                            }
+                          }}
                         />
                       </div>
                     </div>
@@ -1067,6 +881,12 @@ const RoadAnalyzerDashboard = () => {
                 <p className="text-gray-500 max-w-md">
                   Run an analysis first to see detailed results about the road conditions and characteristics.
                 </p>
+                <Button 
+                  label="Go to Data Input" 
+                  icon="pi pi-arrow-left" 
+                  className="p-button-text mt-4"
+                  onClick={() => setActiveTab(0)}
+                />
               </div>
             )}
           </TabPanel>
@@ -1100,7 +920,7 @@ const RoadAnalyzerDashboard = () => {
                 disabled={(images.length === 0 && points.length === 0 && allData.length === 0) || isAnalyzing}
               />
               <Button 
-                label={isAnalyzing ? `Analyzing (${progress}%)` : 'Analyze Road'} 
+                label={isAnalyzing ? `Analyzing (${progress}%)` : 'Analyze'} 
                 icon={isAnalyzing ? 'pi pi-spinner pi-spin' : 'pi pi-play'} 
                 className="p-button-primary"
                 onClick={handleAnalyze}

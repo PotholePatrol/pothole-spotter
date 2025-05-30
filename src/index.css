@@ -1,6 +1,26 @@
 @import "tailwindcss";
 
+/* src/index.css or a separate theme.css */
+.light-theme {
+  --primary-color: #3b82f6;
+  --surface-a: #1f2937;
+  --surface-b: #111827;
+  --surface-c: #374151;
+  --surface-d: #4b5563;
+}
 
+.dark-theme {
+  /* Dark theme overrides */
+  --primary-color: #3b82f6;
+  --surface-a: #1f2937;
+  --surface-b: #111827;
+  --surface-c: #374151;
+  --surface-d: #4b5563;
+  --surface-e: #1f2937;
+  --surface-f: #1f2937;
+  --text-color: #f9fafb;
+  --text-color-secondary: #e5e7eb;
+}
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
